@@ -54,11 +54,14 @@ import com.mapbox.rctmgl.components.camera.CameraStop;
 import com.mapbox.rctmgl.components.camera.CameraUpdateQueue;
 import com.mapbox.rctmgl.components.mapview.helpers.CameraChangeTracker;
 import com.mapbox.rctmgl.components.styles.light.RCTMGLLight;
+import com.mapbox.rctmgl.components.styles.sources.RCTMGLShapeSource;
 import com.mapbox.rctmgl.components.styles.sources.RCTSource;
 import com.mapbox.rctmgl.events.AndroidCallbackEvent;
 import com.mapbox.rctmgl.events.IEvent;
 import com.mapbox.rctmgl.events.MapChangeEvent;
 import com.mapbox.rctmgl.events.MapClickEvent;
+import com.mapbox.rctmgl.events.MapDragEndEvent;
+import com.mapbox.rctmgl.events.MapDragEvent;
 import com.mapbox.rctmgl.events.MapUserTrackingModeEvent;
 import com.mapbox.rctmgl.events.constants.EventKeys;
 import com.mapbox.rctmgl.events.constants.EventTypes;
@@ -69,6 +72,7 @@ import com.mapbox.rctmgl.location.UserLocationVerticalAlignment;
 import com.mapbox.rctmgl.location.UserTrackingMode;
 import com.mapbox.rctmgl.location.UserTrackingState;
 import com.mapbox.rctmgl.utils.BitmapUtils;
+import com.mapbox.rctmgl.utils.DraggableSymbolsManager;
 import com.mapbox.rctmgl.utils.FilterParser;
 import com.mapbox.rctmgl.utils.GeoJSONUtils;
 import com.mapbox.rctmgl.utils.GeoViewport;
@@ -93,7 +97,8 @@ import javax.annotation.Nullable;
 @SuppressWarnings({"MissingPermission"})
 public class RCTMGLMapView extends MapView implements
         OnMapReadyCallback, MapboxMap.OnMapClickListener, MapboxMap.OnMapLongClickListener,
-        MapView.OnMapChangedListener, MapboxMap.OnMarkerViewClickListener {
+        MapView.OnMapChangedListener, MapboxMap.OnMarkerViewClickListener,
+        DraggableSymbolsManager.OnSymbolDragListener {
     public static final String LOG_TAG = RCTMGLMapView.class.getSimpleName();
 
     public static final int USER_LOCATION_CAMERA_MOVE_DURATION = 1000;
@@ -104,6 +109,8 @@ public class RCTMGLMapView extends MapView implements
     private LifecycleEventListener mLifeCycleListener;
     private boolean mPaused;
     private boolean mDestroyed;
+
+    private DraggableSymbolsManager draggableSymbolsManager;
 
     private List<AbstractMapFeature> mFeatures;
     private List<AbstractMapFeature> mQueuedFeatures;
@@ -138,6 +145,7 @@ public class RCTMGLMapView extends MapView implements
     private int mUserTrackingMode;
     private int mUserTrackingState = UserTrackingState.POSSIBLE;
     private int mUserLocationVerticalAlignment = UserLocationVerticalAlignment.CENTER;
+    private String mDraggableLayerID;
 
     private double mHeading;
     private double mPitch;
@@ -228,6 +236,31 @@ public class RCTMGLMapView extends MapView implements
             mLocationLayer.onStop();
         }
 
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (draggableSymbolsManager != null) {
+            draggableSymbolsManager.onParentTouchEvent(ev);
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
+    @Override
+    public void onSymbolDrag(String id, LatLng newLatLng) {
+        mManager.handleEvent(new MapDragEvent(this, id, newLatLng));
+    }
+
+    @Override
+    public void onSymbolDragEnd(String id, LatLng newLatLng) {
+        mManager.handleEvent(new MapDragEndEvent(this, id, newLatLng));
+    }
+
+    public void setGeoJSON(String sourceID, String json) {
+        if (mSources.get(sourceID) instanceof RCTMGLShapeSource) {
+            RCTMGLShapeSource source = (RCTMGLShapeSource) mSources.get(sourceID);
+            source.setShape(json);
+        }
     }
 
     public void enqueuePreRenderMapMethod(Integer methodID, @Nullable ReadableArray args) {
@@ -356,7 +389,10 @@ public class RCTMGLMapView extends MapView implements
     @Override
     public void onMapReady(final MapboxMap mapboxMap) {
         mMap = mapboxMap;
-
+        if (this.mDraggableLayerID != null) {
+            draggableSymbolsManager = new DraggableSymbolsManager(this, mapboxMap, this.mDraggableLayerID);
+            draggableSymbolsManager.addOnSymbolDragListener(this);
+        }
         reflow(); // the internal widgets(compass, attribution, etc) need this to position themselves correctly
 
         final MarkerViewManager markerViewManager = mMap.getMarkerViewManager();
@@ -889,6 +925,16 @@ public class RCTMGLMapView extends MapView implements
     }
 
     //endregion
+
+    public void setReactDraggableLayerID(String id) {
+        this.mDraggableLayerID = id;
+        if (mMap != null && id != null) {
+            draggableSymbolsManager = new DraggableSymbolsManager(this, mMap, id);
+            draggableSymbolsManager.addOnSymbolDragListener(this);
+        } else {
+            draggableSymbolsManager = null;
+        }
+    }
 
     //region Methods
 

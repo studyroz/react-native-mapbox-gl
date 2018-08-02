@@ -11,6 +11,7 @@ import com.facebook.react.common.MapBuilder;
 import com.facebook.react.uimanager.LayoutShadowNode;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.annotations.ReactProp;
+import com.facebook.react.uimanager.events.Event;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.rctmgl.components.AbstractEventEmitter;
 import com.mapbox.rctmgl.events.constants.EventKeys;
@@ -215,6 +216,10 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
         mapView.setReactUserLocationVerticalAlignment(userLocationVerticalAlignment);
     }
 
+    @ReactProp(name="draggableLayerID")
+    public void setDraggableLayerID(RCTMGLMapView mapView, String id) {
+        mapView.setReactDraggableLayerID(id);
+    }
     //endregion
 
     //region Custom Events
@@ -228,6 +233,8 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
                 .put(EventKeys.MAP_ON_LOCATION_CHANGE, "onLocationChange")
                 .put(EventKeys.MAP_USER_TRACKING_MODE_CHANGE, "onUserTrackingModeChange")
                 .put(EventKeys.MAP_ANDROID_CALLBACK, "onAndroidCallback")
+                .put(EventKeys.MAP_DRAG, "onDrag")
+                .put(EventKeys.MAP_DRAG_END, "onDragEnd")
                 .build();
     }
 
@@ -244,6 +251,7 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
     public static final int METHOD_TAKE_SNAP = 7;
     public static final int METHOD_GET_ZOOM = 8;
     public static final int METHOD_GET_CENTER = 9;
+    public static final int METHOD_SET_GEOJSON = 10;
 
     @Nullable
     @Override
@@ -258,6 +266,7 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
                 .put("takeSnap", METHOD_TAKE_SNAP)
                 .put("getZoom", METHOD_GET_ZOOM)
                 .put("getCenter", METHOD_GET_CENTER)
+                .put("setGeoJSON", METHOD_SET_GEOJSON)
                 .build();
     }
 
@@ -305,6 +314,9 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
                 break;
             case METHOD_GET_CENTER:
                 mapView.getCenter(args.getString(0));
+                break;
+            case METHOD_SET_GEOJSON:
+                mapView.setGeoJSON(args.getString(1), args.getString(2));
                 break;
         }
     }
