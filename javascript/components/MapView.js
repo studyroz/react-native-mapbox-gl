@@ -165,6 +165,10 @@ class MapView extends React.Component {
      */
     onPress: PropTypes.func,
 
+    onDrag: PropTypes.func,
+
+    onDragEnd: PropTypes.func,
+
     /**
      * Map long press listener, gets called when a user long presses the map
      */
@@ -254,6 +258,8 @@ class MapView extends React.Component {
      * The emitted frequency of regiondidchange events
      */
     regionDidChangeDebounceTime: PropTypes.number,
+
+    draggableLayerID: PropTypes.string
   };
 
   static defaultProps = {
@@ -282,6 +288,8 @@ class MapView extends React.Component {
     };
 
     this._onPress = this._onPress.bind(this);
+    this._onDrag = this._onDrag.bind(this);
+    this._onDragEnd = this._onDragEnd.bind(this);
     this._onLongPress = this._onLongPress.bind(this);
     this._onChange = this._onChange.bind(this);
     this._onAndroidCallback = this._onAndroidCallback.bind(this);
@@ -607,6 +615,10 @@ class MapView extends React.Component {
     return res.center;
   }
 
+  setGeoJSON(sourceID, json) {
+    return this._runNativeCommand('setGeoJSON', [sourceID, json]);
+  }
+
   _runNativeCommand(methodName, args = []) {
     if (!this._nativeRef) {
       return new Promise((resolve) => {
@@ -690,6 +702,18 @@ class MapView extends React.Component {
   _onPress(e) {
     if (isFunction(this.props.onPress)) {
       this.props.onPress(e.nativeEvent.payload);
+    }
+  }
+
+  _onDrag(e) {
+    if (isFunction(this.props.onDrag)) {
+      this.props.onDrag(e.nativeEvent.payload);
+    }
+  }
+
+  _onDragEnd(e) {
+    if (isFunction(this.props.onDragEnd)) {
+      this.props.onDragEnd(e.nativeEvent.payload);
     }
   }
 
@@ -821,6 +845,8 @@ class MapView extends React.Component {
     const callbacks = {
       ref: (nativeRef) => this._setNativeRef(nativeRef),
       onPress: this._onPress,
+      onDrag: this._onDrag,
+      onDragEnd: this._onDragEnd,
       onLongPress: this._onLongPress,
       onMapChange: this._onChange,
       onAndroidCallback: isAndroid() ? this._onAndroidCallback : undefined,
