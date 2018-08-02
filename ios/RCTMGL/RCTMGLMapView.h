@@ -38,6 +38,7 @@
 
 @property (nonatomic, copy) NSString *reactCenterCoordinate;
 @property (nonatomic, copy) NSString *reactStyleURL;
+@property (nonatomic, copy) NSString *reactDraggableLayerID;
 
 @property (nonatomic, assign) BOOL isUserInteraction;
 @property (nonatomic, assign) int reactUserTrackingMode;
@@ -50,6 +51,8 @@
 @property (nonatomic, assign) double reactMaxZoomLevel;
 
 @property (nonatomic, copy) RCTBubblingEventBlock onPress;
+@property (nonatomic, copy) RCTBubblingEventBlock onDrag;
+@property (nonatomic, copy) RCTBubblingEventBlock onDragEnd;
 @property (nonatomic, copy) RCTBubblingEventBlock onLongPress;
 @property (nonatomic, copy) RCTBubblingEventBlock onMapChange;
 @property (nonatomic, copy) RCTBubblingEventBlock onUserTrackingModeChange;
