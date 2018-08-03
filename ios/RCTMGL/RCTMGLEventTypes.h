@@ -42,4 +42,8 @@ extern NSString *const RCT_MAPBOX_OFFLINE_TILE_LIMIT;
 
 extern NSString *const RCT_MAPBOX_SHAPE_SOURCE_LAYER_PRESS;
 extern NSString *const RCT_MAPBOX_VECTOR_SOURCE_LAYER_PRESS;
+
+extern NSString *const RCT_MAPBOX_EVENT_DRAG;
+extern NSString *const RCT_MAPBOX_EVENT_DRAG_END;
+
 @end

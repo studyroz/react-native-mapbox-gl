@@ -19,7 +19,10 @@
 #import "FilterParser.h"
 #import "MGLFaux3DUserLocationAnnotationView.h"
 
-@interface RCTMGLMapViewManager() <MGLMapViewDelegate>
+@interface RCTMGLMapViewManager() <MGLMapViewDelegate, UIGestureRecognizerDelegate>
+
+@property (nonatomic, strong) NSString *draggedSymbolID;
+
 @end
 
 @implementation RCTMGLMapViewManager
@@ -47,7 +50,13 @@ RCT_EXPORT_MODULE(RCTMGLMapView)
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(didTapMap:)];
     [tap requireGestureRecognizerToFail:doubleTap];
     
+    UILongPressGestureRecognizer *drag = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(didDragMap:)];
+    drag.minimumPressDuration = 0.001;
+    drag.delegate = self;
+    [drag requireGestureRecognizerToFail:tap];
+    
     UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(didLongPressMap:)];
+    [longPress requireGestureRecognizerToFail:drag];
     
     // this allows the internal annotation gestures to take precedents over the map tap gesture
     for (int i = 0; i < mapView.gestureRecognizers.count; i++) {
@@ -61,8 +70,29 @@ RCT_EXPORT_MODULE(RCTMGLMapView)
     [mapView addGestureRecognizer:doubleTap];
     [mapView addGestureRecognizer:tap];
     [mapView addGestureRecognizer:longPress];
+    [mapView addGestureRecognizer:drag];
     
     return mapView;
+}
+
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
+    if (![gestureRecognizer.view isKindOfClass:[RCTMGLMapView class]]) {
+        return false;
+    }
+    RCTMGLMapView *mapView = gestureRecognizer.view;
+    if (!mapView.reactDraggableLayerID) {
+        return false;
+    }
+    CGPoint location = [gestureRecognizer locationInView:mapView];
+    CGFloat padding = 20;
+    NSArray<id<MGLFeature>> *features =
+    [mapView visibleFeaturesInRect:CGRectMake(location.x - padding, location.y - padding, padding * 2, padding * 2)
+      inStyleLayersWithIdentifiers:[NSSet setWithObjects:mapView.reactDraggableLayerID, nil]];
+    if (features.count > 0 && features.firstObject.identifier != nil) {
+        self.draggedSymbolID = features.firstObject.identifier;
+        return true;
+    }
+    return false;
 }
 
 #pragma mark - React View Props
@@ -91,7 +121,11 @@ RCT_REMAP_VIEW_PROPERTY(zoomLevel, reactZoomLevel, double)
 RCT_REMAP_VIEW_PROPERTY(minZoomLevel, reactMinZoomLevel, double)
 RCT_REMAP_VIEW_PROPERTY(maxZoomLevel, reactMaxZoomLevel, double)
 
+RCT_REMAP_VIEW_PROPERTY(draggableLayerID, reactDraggableLayerID, NSString)
+
 RCT_EXPORT_VIEW_PROPERTY(onPress, RCTBubblingEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onDrag, RCTBubblingEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onDragEnd, RCTBubblingEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onLongPress, RCTBubblingEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onMapChange, RCTBubblingEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onUserTrackingModeChange, RCTBubblingEventBlock)
@@ -322,6 +356,26 @@ RCT_EXPORT_METHOD(setCamera:(nonnull NSNumber*)reactTag
     }];
 }
 
+RCT_EXPORT_METHOD(setGeoJSON:(nonnull NSNumber *)reactTag sourceID:(NSString *)sourceID json:(NSString *)json)
+{
+    [self.bridge.uiManager addUIBlock:^(__unused RCTUIManager *manager, NSDictionary<NSNumber*, UIView*> *viewRegistry) {
+        id view = viewRegistry[reactTag];
+        
+        if (![view isKindOfClass:[RCTMGLMapView class]]) {
+            RCTLogError(@"Invalid react tag, could not find RCTMGLMapView");
+            return;
+        }
+        
+        __weak RCTMGLMapView *reactMapView = (RCTMGLMapView*)view;
+        for (RCTMGLSource *source in reactMapView.sources) {
+            if ([source.id isEqualToString:sourceID] && [source isKindOfClass:[RCTMGLShapeSource class]]) {
+                RCTMGLShapeSource *shapeSource = source;
+                shapeSource.shape = json;
+            }
+        }
+    }];
+}
+
 #pragma mark - UIGestureRecognizers
 
 - (void)didTapMap:(UITapGestureRecognizer *)recognizer
@@ -373,6 +427,36 @@ RCT_EXPORT_METHOD(setCamera:(nonnull NSNumber*)reactTag
     
     RCTMGLMapTouchEvent *event = [RCTMGLMapTouchEvent makeTapEvent:mapView withPoint:screenPoint];
     [self fireEvent:event withCallback:mapView.onPress];
+}
+
+- (void)didDragMap:(UILongPressGestureRecognizer *)recognizer
+{
+    if (!self.draggedSymbolID) {
+        return;
+    }
+    RCTMGLMapView *mapView = (RCTMGLMapView *)recognizer.view;
+    CGPoint location = [recognizer locationInView:mapView];
+    CLLocationCoordinate2D coordinate = [mapView convertPoint:location toCoordinateFromView:mapView];
+    
+    switch (recognizer.state) {
+        case UIGestureRecognizerStateBegan:
+            break;
+        case UIGestureRecognizerStateChanged: {
+            NSDictionary *payload = @{ @"id": self.draggedSymbolID, @"coordinate": @[@(coordinate.longitude), @(coordinate.latitude)] };
+            RCTMGLEvent *event = [RCTMGLEvent makeEvent:RCT_MAPBOX_EVENT_DRAG withPayload:payload];
+            [self fireEvent:event withCallback:mapView.onDrag];
+        }
+            break;
+        case UIGestureRecognizerStateEnded: {
+            NSDictionary *payload = @{ @"id": self.draggedSymbolID, @"coordinate": @[@(coordinate.longitude), @(coordinate.latitude)] };
+            RCTMGLEvent *event = [RCTMGLEvent makeEvent:RCT_MAPBOX_EVENT_DRAG_END withPayload:payload];
+            [self fireEvent:event withCallback:mapView.onDragEnd];
+            self.draggedSymbolID = nil;
+        }
+            break;
+        default:
+            break;
+    }
 }
 
 - (void)didLongPressMap:(UILongPressGestureRecognizer *)recognizer

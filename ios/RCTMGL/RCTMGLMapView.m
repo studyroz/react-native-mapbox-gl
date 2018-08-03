@@ -237,6 +237,11 @@ static double const M2PI = M_PI * 2;
     self.userLocationVerticalAlignment = reactUserLocationVerticalAlignment;
 }
 
+- (void)setReactDraggableLayerID:(NSString *)reactDraggableLayerID
+{
+    _reactDraggableLayerID = reactDraggableLayerID;
+}
+
 #pragma mark - methods
 
 - (NSString *)takeSnap:(BOOL)writeToDisk

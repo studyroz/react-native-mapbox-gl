@@ -43,4 +43,7 @@ NSString *const RCT_MAPBOX_OFFLINE_TILE_LIMIT = @"offlinetilelimit";
 NSString *const RCT_MAPBOX_SHAPE_SOURCE_LAYER_PRESS = @"shapesourcelayerpress";
 NSString *const RCT_MAPBOX_VECTOR_SOURCE_LAYER_PRESS = @"vectorsourcelayerpress";
 
+NSString *const RCT_MAPBOX_EVENT_DRAG = @"drag";
+NSString *const RCT_MAPBOX_EVENT_DRAG_END = @"dragend";
+
 @end
