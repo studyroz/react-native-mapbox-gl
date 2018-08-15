@@ -10,6 +10,7 @@ import com.mapbox.android.gestures.MoveGestureDetector;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
+import com.mapbox.mapboxsdk.maps.UiSettings;
 import com.mapbox.services.commons.geojson.Feature;
 
 import java.util.ArrayList;
@@ -22,6 +23,22 @@ public class DraggableSymbolsManager {
         void onSymbolDragEnd(String id, LatLng newLatLng);
     }
 
+    private class GesturesContext {
+        private boolean scrollGesturesEnabled;
+        private boolean rotateGesturesEnabled;
+        private boolean tiltGesturesEnabled;
+        private boolean zoomGesturesEnabled;
+        private boolean doubleTapGesturesEnabled;
+
+        public GesturesContext(boolean scrollGesturesEnabled, boolean rotateGesturesEnabled, boolean tiltGesturesEnabled, boolean zoomGesturesEnabled, boolean doubleTapGesturesEnabled) {
+            this.scrollGesturesEnabled = scrollGesturesEnabled;
+            this.rotateGesturesEnabled = rotateGesturesEnabled;
+            this.tiltGesturesEnabled = tiltGesturesEnabled;
+            this.zoomGesturesEnabled = zoomGesturesEnabled;
+            this.doubleTapGesturesEnabled = doubleTapGesturesEnabled;
+        }
+    }
+
     public class MapMoveGestureListener implements MoveGestureDetector.OnMoveGestureListener {
         private MapboxMap mapboxMap;
         private float touchAreaShiftX;
@@ -31,6 +48,8 @@ public class DraggableSymbolsManager {
         private boolean querySymbol;
         private String draggedSymbolID;
         private LatLng latestLatLng;
+
+        private GesturesContext gesturesContext;
 
         public MapMoveGestureListener(MapboxMap mapboxMap, String symbolLayerID,
                                       float touchAreaShiftX, float touchAreaShiftY) {
@@ -61,13 +80,14 @@ public class DraggableSymbolsManager {
                 List<Feature> features = mapboxMap.queryRenderedFeatures(rect, symbolLayerID);
                 if (!features.isEmpty()) {
                     draggedSymbolID = features.get(0).getId();
+                    saveGesturesContext();
+                    mapboxMap.getUiSettings().setAllGesturesEnabled(false);
                 }
             }
 
             if (draggedSymbolID != null) {
                 LatLng latLng = mapboxMap.getProjection().fromScreenLocation(point);
                 latestLatLng = latLng;
-                mapboxMap.getUiSettings().setAllGesturesEnabled(false);
                 for (DraggableSymbolsManager.OnSymbolDragListener listener: onSymbolDragListeners) {
                     listener.onSymbolDrag(draggedSymbolID, latLng);
                 }
@@ -87,7 +107,31 @@ public class DraggableSymbolsManager {
             latestLatLng = null;
             draggedSymbolID = null;
             querySymbol = false;
-            mapboxMap.getUiSettings().setAllGesturesEnabled(true);
+            restoreGesturesContext();
+        }
+
+        private void saveGesturesContext() {
+            UiSettings settings = mapboxMap.getUiSettings();
+            gesturesContext = new GesturesContext(
+                    settings.isScrollGesturesEnabled(),
+                    settings.isRotateGesturesEnabled(),
+                    settings.isTiltGesturesEnabled(),
+                    settings.isZoomGesturesEnabled(),
+                    settings.isDoubleTapGesturesEnabled()
+            );
+        }
+
+        private void restoreGesturesContext() {
+            if (gesturesContext == null) {
+                return;
+            }
+            UiSettings settings = mapboxMap.getUiSettings();
+            settings.setScrollGesturesEnabled(gesturesContext.scrollGesturesEnabled);
+            settings.setRotateGesturesEnabled(gesturesContext.rotateGesturesEnabled);
+            settings.setTiltGesturesEnabled(gesturesContext.tiltGesturesEnabled);
+            settings.setZoomGesturesEnabled(gesturesContext.zoomGesturesEnabled);
+            settings.setDoubleTapGesturesEnabled(gesturesContext.doubleTapGesturesEnabled);
+            gesturesContext = null;
         }
     }
 
