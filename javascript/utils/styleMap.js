@@ -1585,6 +1585,10 @@ export const styleExtras = {
   fillExtrusionTranslate: {
     iosType: 'vector',
   },
+
+  iconTextFitPadding: {
+    iosType: 'insets'
+  }
 };
 
 export default styleMap;

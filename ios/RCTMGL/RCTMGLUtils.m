@@ -67,6 +67,11 @@ static double const MS_TO_S = 0.001;
     return CGVectorMake([arr[0] floatValue], [arr[1] floatValue]);
 }
 
++ (UIEdgeInsets)toUIEdgeInsets:(NSArray<NSNumber *> *)arr
+{
+    return UIEdgeInsetsMake([arr[0] floatValue], [arr[1] floatValue], [arr[2] floatValue], [arr[3] floatValue]);
+}
+
 + (void)fetchImage:(RCTBridge*)bridge url:(NSString *)url callback:(RCTImageLoaderCompletionBlock)callback
 {
     [RCTMGLImageQueue.sharedInstance addImage:url bridge:bridge completionHandler:callback];
