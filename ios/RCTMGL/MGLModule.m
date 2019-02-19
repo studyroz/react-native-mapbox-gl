@@ -259,6 +259,14 @@ RCT_EXPORT_METHOD(getAccessToken:(RCTPromiseResolveBlock)resolve rejecter:(RCTPr
     reject(@"missing_access_token", @"No access token has been set", nil);
 }
 
+RCT_EXPORT_METHOD(setApiBaseUrl:(NSString *)url)
+{
+    [NSClassFromString(@"MGLNetworkConfiguration")
+     performSelectorOnMainThread:@selector(setAPIBaseURL:)
+     withObject:[NSURL URLWithString:url]
+     waitUntilDone:true];
+}
+
 RCT_EXPORT_METHOD(setTelemetryEnabled:(BOOL *)telemetryEnabled)
 {
     [[NSUserDefaults standardUserDefaults] setBool:telemetryEnabled

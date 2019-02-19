@@ -13,12 +13,14 @@ import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.annotations.ReactProp;
 import com.facebook.react.uimanager.events.Event;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
+import com.mapbox.mapboxsdk.maps.MapboxMapOptions;
 import com.mapbox.rctmgl.components.AbstractEventEmitter;
 import com.mapbox.rctmgl.events.constants.EventKeys;
 import com.mapbox.rctmgl.utils.ConvertUtils;
 import com.mapbox.rctmgl.utils.FilterParser;
 import com.mapbox.rctmgl.utils.GeoJSONUtils;
 import com.mapbox.services.commons.geojson.Point;
+import com.mapbox.rctmgl.modules.RCTMGLModule;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -93,7 +95,8 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
 
     @Override
     protected RCTMGLMapView createViewInstance(ThemedReactContext themedReactContext) {
-        return new RCTMGLMapView(themedReactContext, this, null);
+        MapboxMapOptions options = new MapboxMapOptions().apiBaseUrl(RCTMGLModule.apiBaseUrl);
+        return new RCTMGLMapView(themedReactContext, this, options);
     }
 
     @Override
