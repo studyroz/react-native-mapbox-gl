@@ -39,6 +39,8 @@ public class RCTMGLModule extends ReactContextBaseJavaModule {
     private Handler mUiThreadHandler;
     private ReactApplicationContext mReactContext;
 
+    public static String apiBaseUrl;
+
     public RCTMGLModule(ReactApplicationContext reactApplicationContext) {
         super(reactApplicationContext);
         mReactContext = reactApplicationContext;
@@ -286,6 +288,12 @@ public class RCTMGLModule extends ReactContextBaseJavaModule {
         WritableMap map = Arguments.createMap();
         map.putString("accessToken", Mapbox.getAccessToken());
         promise.resolve(map);
+    }
+
+
+    @ReactMethod
+    public void setApiBaseUrl(final String url) {
+        apiBaseUrl = url;
     }
 
     @ReactMethod
