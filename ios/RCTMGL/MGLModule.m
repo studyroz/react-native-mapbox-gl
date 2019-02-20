@@ -261,10 +261,13 @@ RCT_EXPORT_METHOD(getAccessToken:(RCTPromiseResolveBlock)resolve rejecter:(RCTPr
 
 RCT_EXPORT_METHOD(setApiBaseUrl:(NSString *)url)
 {
-    [NSClassFromString(@"MGLNetworkConfiguration")
-     performSelectorOnMainThread:@selector(setAPIBaseURL:)
-     withObject:[NSURL URLWithString:url]
-     waitUntilDone:true];
+    Class networkConfiguration = NSClassFromString(@"MGLNetworkConfiguration");
+    if (networkConfiguration && [networkConfiguration respondsToSelector:@selector(setAPIBaseURL:)]) {
+        [networkConfiguration
+         performSelectorOnMainThread:@selector(setAPIBaseURL:)
+         withObject:[NSURL URLWithString:url]
+         waitUntilDone:true];
+    }
 }
 
 RCT_EXPORT_METHOD(setTelemetryEnabled:(BOOL *)telemetryEnabled)
