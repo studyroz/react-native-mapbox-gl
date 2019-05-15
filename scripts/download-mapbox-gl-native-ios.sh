@@ -27,6 +27,7 @@ fi
 curl -sS https://mapbox.s3.amazonaws.com/mapbox-gl-native/ios/builds/mapbox-ios-sdk-$VERSION-dynamic.zip > temp.zip
 unzip -o temp.zip -d temp
 mv temp/dynamic/Mapbox.framework ./Mapbox.framework
+mv temp/dynamic/Mapbox.framework.dSYM ./Mapbox.framework.dSYM
 rm -r temp
 rm temp.zip
 
