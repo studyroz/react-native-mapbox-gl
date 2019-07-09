@@ -56,7 +56,7 @@
     if (iosTypeOverride != nil) {
         if ([iosTypeOverride isEqual:@"vector"]) {
             rawValue = [NSValue valueWithCGVector:[RCTMGLUtils toCGVector:rawValue]];
-        } else if ([iosTypeOverride isEqual:@"insets"]) {
+        } else if ([iosTypeOverride isEqual:@"edgeinsets"]){
             rawValue = [NSValue valueWithUIEdgeInsets:[RCTMGLUtils toUIEdgeInsets:rawValue]];
         }
     }

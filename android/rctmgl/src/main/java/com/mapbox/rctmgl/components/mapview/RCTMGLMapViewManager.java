@@ -1,7 +1,5 @@
 package com.mapbox.rctmgl.components.mapview;
 
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 
@@ -12,6 +10,7 @@ import com.facebook.react.uimanager.LayoutShadowNode;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.annotations.ReactProp;
 import com.facebook.react.uimanager.events.Event;
+import com.mapbox.mapboxsdk.geometry.LatLngBounds;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.MapboxMapOptions;
 import com.mapbox.rctmgl.components.AbstractEventEmitter;
@@ -19,10 +18,11 @@ import com.mapbox.rctmgl.events.constants.EventKeys;
 import com.mapbox.rctmgl.utils.ConvertUtils;
 import com.mapbox.rctmgl.utils.FilterParser;
 import com.mapbox.rctmgl.utils.GeoJSONUtils;
+import com.mapbox.services.commons.geojson.FeatureCollection;
 import com.mapbox.services.commons.geojson.Point;
 import com.mapbox.rctmgl.modules.RCTMGLModule;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -204,6 +204,15 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
         }
     }
 
+    @ReactProp(name="visibleCoordinateBounds")
+    public void setVisibleCoordinateBounds(RCTMGLMapView mapView, String featureJSONStr) {
+        FeatureCollection collection = FeatureCollection.fromJson(featureJSONStr);
+        LatLngBounds bounds = GeoJSONUtils.toLatLngBounds(collection);
+        if (bounds != null) {
+            mapView.setReactVisibleCoordinateBounds(bounds);
+        }
+    }
+
     @ReactProp(name="showUserLocation")
     public void setShowUserLocation(RCTMGLMapView mapView, boolean showUserLocation) {
         mapView.setReactShowUserLocation(showUserLocation);
@@ -254,7 +263,10 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
     public static final int METHOD_TAKE_SNAP = 7;
     public static final int METHOD_GET_ZOOM = 8;
     public static final int METHOD_GET_CENTER = 9;
-    public static final int METHOD_SET_GEOJSON = 10;
+    public static final int METHOD_SET_HANDLED_MAP_EVENTS = 10;
+    public static final int METHOD_SHOW_ATTRIBUTION = 11;
+
+    public static final int METHOD_SET_GEOJSON = 15;
 
     @Nullable
     @Override
@@ -270,6 +282,8 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
                 .put("getZoom", METHOD_GET_ZOOM)
                 .put("getCenter", METHOD_GET_CENTER)
                 .put("setGeoJSON", METHOD_SET_GEOJSON)
+                .put( "setHandledMapChangedEvents", METHOD_SET_HANDLED_MAP_EVENTS)
+                .put("showAttribution", METHOD_SHOW_ATTRIBUTION)
                 .build();
     }
 
@@ -320,6 +334,18 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
                 break;
             case METHOD_SET_GEOJSON:
                 mapView.setGeoJSON(args.getString(1), args.getString(2));
+                break;
+            case METHOD_SET_HANDLED_MAP_EVENTS:
+                if(args != null) {
+                    ArrayList<String> eventsArray = new ArrayList<>();
+                    for (int i = 1; i < args.size(); i++) {
+                        eventsArray.add(args.getString(i));
+                    }
+                    mapView.setHandledMapChangedEvents(eventsArray);
+                }
+                break;
+            case METHOD_SHOW_ATTRIBUTION:
+                mapView.showAttribution();
                 break;
         }
     }
