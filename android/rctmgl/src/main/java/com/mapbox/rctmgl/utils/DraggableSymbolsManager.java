@@ -11,7 +11,7 @@ import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.UiSettings;
-import com.mapbox.services.commons.geojson.Feature;
+import com.mapbox.geojson.Feature;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,7 +79,7 @@ public class DraggableSymbolsManager {
                 querySymbol = true;
                 List<Feature> features = mapboxMap.queryRenderedFeatures(rect, symbolLayerID);
                 if (!features.isEmpty()) {
-                    draggedSymbolID = features.get(0).getId();
+                    draggedSymbolID = features.get(0).id();
                     saveGesturesContext();
                     mapboxMap.getUiSettings().setAllGesturesEnabled(false);
                 }

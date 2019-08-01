@@ -73,11 +73,7 @@ import com.mapbox.rctmgl.location.UserLocationLayerConstants;
 import com.mapbox.rctmgl.location.UserLocationVerticalAlignment;
 import com.mapbox.rctmgl.location.UserTrackingState;
 import com.mapbox.rctmgl.utils.BitmapUtils;
-<<<<<<< HEAD
 import com.mapbox.rctmgl.utils.DraggableSymbolsManager;
-import com.mapbox.rctmgl.utils.FilterParser;
-=======
->>>>>>> 7.0.0-rc3
 import com.mapbox.rctmgl.utils.GeoJSONUtils;
 import com.mapbox.rctmgl.utils.GeoViewport;
 import com.mapbox.rctmgl.utils.SimpleEventCallback;
@@ -146,8 +142,6 @@ public class RCTMGLMapView extends MapView implements
     private String mDraggableLayerID;
 
     private MarkerViewManager markerViewManager;
-
-    private long mActiveMarkerID = -1;
 
     private ReadableArray mInsets;
 
