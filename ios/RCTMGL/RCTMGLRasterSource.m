@@ -12,7 +12,7 @@
 
 - (MGLSource*)makeSource
 {
-    return [[MGLRasterSource alloc] initWithIdentifier:self.id
+    return [[MGLRasterTileSource alloc] initWithIdentifier:self.id
                                     tileURLTemplates:@[_url]
                                     options:[self _getOptions]];
 }
@@ -29,6 +29,10 @@
         options[MGLTileSourceOptionMinimumZoomLevel] = _minZoomLevel;
     }
     
+    if (_tileSize != nil) {
+        options[MGLTileSourceOptionTileSize] = _tileSize;
+    }
+
     if (_tms) {
         options[MGLTileSourceOptionTileCoordinateSystem] = [NSNumber numberWithUnsignedInteger:MGLTileCoordinateSystemTMS];
     }

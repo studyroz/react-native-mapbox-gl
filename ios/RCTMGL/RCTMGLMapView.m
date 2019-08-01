@@ -13,6 +13,9 @@
 #import "UIView+React.h"
 
 @implementation RCTMGLMapView
+{
+    BOOL _pendingInitialLayout;
+}
 
 static double const DEG2RAD = M_PI / 180;
 static double const LAT_MAX = 85.051128779806604;
@@ -23,12 +26,24 @@ static double const M2PI = M_PI * 2;
 - (instancetype)initWithFrame:(CGRect)frame
 {
     if (self = [super initWithFrame:frame]) {
+        _pendingInitialLayout = YES;
         _cameraUpdateQueue = [[CameraUpdateQueue alloc] init];
         _sources = [[NSMutableArray alloc] init];
         _pointAnnotations = [[NSMutableArray alloc] init];
         _reactSubviews = [[NSMutableArray alloc] init];
+        _layerWaiters = [[NSMutableDictionary alloc] init];
     }
     return self;
+}
+
+- (void)layoutSubviews
+{
+    [super layoutSubviews];
+    if (_pendingInitialLayout) {
+        _pendingInitialLayout = NO;
+
+        [   _reactCamera initialLayout];
+    }
 }
 
 - (void)invalidate
@@ -38,6 +53,40 @@ static double const M2PI = M_PI * 2;
     }
     for (int i = 0; i < _reactSubviews.count; i++) {
         [self removeFromMap:_reactSubviews[i]];
+    }
+}
+
+- (void)layerAdded:(MGLStyleLayer*) layer
+{
+    NSString* layerID = layer.identifier;
+    NSMutableArray* waiters = [_layerWaiters valueForKey:layerID];
+    if (waiters) {
+        for (FoundLayerBlock foundLayerBlock in waiters) {
+            foundLayerBlock(layer);
+        }
+        [_layerWaiters removeObjectForKey:layerID];
+    }
+}
+
+- (void)waitForLayerWithID:(nonnull NSString*)layerID then:(void (^)(MGLStyleLayer* layer))foundLayer {
+    if (self.style) {
+        MGLStyleLayer* layer = [self.style layerWithIdentifier:layerID];
+        if (layer) {
+            foundLayer(layer);
+        } else {
+            NSMutableArray* existingWaiters = [_layerWaiters valueForKey:layerID];
+            
+            NSMutableArray* waiters = existingWaiters;
+            if (waiters == nil) {
+                waiters = [[NSMutableArray alloc] init];
+            }
+            [waiters addObject:foundLayer];
+            if (! existingWaiters) {
+                [_layerWaiters setObject:waiters forKey:layerID];
+            }
+        }
+    } else {
+        // TODO
     }
 }
 
@@ -55,6 +104,9 @@ static double const M2PI = M_PI * 2;
         RCTMGLPointAnnotation *pointAnnotation = (RCTMGLPointAnnotation *)subview;
         pointAnnotation.map = self;
         [_pointAnnotations addObject:pointAnnotation];
+    } else if ([subview isKindOfClass:[RCTMGLCamera class]]) {
+        RCTMGLCamera *camera = (RCTMGLCamera *)subview;
+        camera.map = self;
     } else {
         NSArray<id<RCTComponent>> *childSubviews = [subview reactSubviews];
 
@@ -74,12 +126,19 @@ static double const M2PI = M_PI * 2;
         RCTMGLPointAnnotation *pointAnnotation = (RCTMGLPointAnnotation *)subview;
         pointAnnotation.map = nil;
         [_pointAnnotations removeObject:pointAnnotation];
+    } else if ([subview isKindOfClass:[RCTMGLCamera class]]) {
+        RCTMGLCamera *camera = (RCTMGLCamera *)subview;
+        camera.map = nil;
     } else {
         NSArray<id<RCTComponent>> *childSubViews = [subview reactSubviews];
         
         for (int i = 0; i < childSubViews.count; i++) {
             [self removeFromMap:childSubViews[i]];
         }
+    }
+    if ([_layerWaiters count] > 0) {
+        RCTLogWarn(@"The following layers were waited on but never added to the map: %@", [_layerWaiters allKeys]);
+        [_layerWaiters removeAllObjects];
     }
 }
 
@@ -153,14 +212,9 @@ static double const M2PI = M_PI * 2;
 
 - (void)setReactShowUserLocation:(BOOL)reactShowUserLocation
 {
-    _reactShowUserLocation = reactShowUserLocation;
-    self.showsUserLocation = _reactShowUserLocation;
-}
-
-- (void)setReactCenterCoordinate:(NSString *)reactCenterCoordinate
-{
-    _reactCenterCoordinate = reactCenterCoordinate;
-    [self _updateCameraIfNeeded:YES];
+    // FMTODO
+    //_reactShowUserLocation = reactShowUserLocation;
+    self.showsUserLocation = reactShowUserLocation; //_reactShowUserLocation;
 }
 
 - (void)setReactContentInset:(NSArray<NSNumber *> *)reactContentInset
@@ -192,49 +246,6 @@ static double const M2PI = M_PI * 2;
     _reactStyleURL = reactStyleURL;
     [self _removeAllSourcesFromMap];
     self.styleURL = [self _getStyleURLFromKey:_reactStyleURL];
-}
-
-- (void)setHeading:(double)heading
-{
-    _heading = heading;
-    [self _updateCameraIfNeeded:NO];
-}
-
-- (void)setPitch:(double)pitch
-{
-    _pitch = pitch;
-    [self _updateCameraIfNeeded:NO];
-}
-
-- (void)setReactZoomLevel:(double)reactZoomLevel
-{
-    _reactZoomLevel = reactZoomLevel;
-    self.zoomLevel = _reactZoomLevel;
-}
-
-- (void)setReactMinZoomLevel:(double)reactMinZoomLevel
-{
-    _reactMinZoomLevel = reactMinZoomLevel;
-    self.minimumZoomLevel = _reactMinZoomLevel;
-}
-
-- (void)setReactMaxZoomLevel:(double)reactMaxZoomLevel
-{
-    _reactMaxZoomLevel = reactMaxZoomLevel;
-    self.maximumZoomLevel = reactMaxZoomLevel;
-}
-
-- (void)setReactUserTrackingMode:(int)reactUserTrackingMode
-{
-    _reactUserTrackingMode = reactUserTrackingMode;
-    [self setUserTrackingMode:_reactUserTrackingMode animated:NO];
-    self.showsUserHeadingIndicator = (NSUInteger)_reactUserTrackingMode == MGLUserTrackingModeFollowWithHeading;
-}
-
-- (void)setReactUserLocationVerticalAlignment:(int)reactUserLocationVerticalAlignment
-{
-    _reactUserLocationVerticalAlignment = reactUserLocationVerticalAlignment;
-    self.userLocationVerticalAlignment = reactUserLocationVerticalAlignment;
 }
 
 - (void)setReactDraggableLayerID:(NSString *)reactDraggableLayerID
@@ -269,10 +280,17 @@ static double const M2PI = M_PI * 2;
 
 - (CLLocationDistance)altitudeFromZoom:(double)zoomLevel
 {
-    CLLocationDistance metersPerPixel = [self getMetersPerPixelAtLatitude:self.camera.centerCoordinate.latitude withZoom:zoomLevel];
-    CLLocationDistance metersTall = metersPerPixel * self.frame.size.height;
-    CLLocationDistance altitude = metersTall / 2 / tan(MGLRadiansFromDegrees(30) / 2.0);
-    return altitude * sin(M_PI_2 - MGLRadiansFromDegrees(self.camera.pitch)) / sin(M_PI_2);
+    return [self altitudeFromZoom:zoomLevel atLatitude:self.camera.centerCoordinate.latitude];
+}
+
+- (CLLocationDistance)altitudeFromZoom:(double)zoomLevel atLatitude:(CLLocationDegrees)latitude
+{
+    return [self altitudeFromZoom:zoomLevel atLatitude:latitude atPitch:self.camera.pitch];
+}
+
+- (CLLocationDistance)altitudeFromZoom:(double)zoomLevel atLatitude:(CLLocationDegrees)latitude atPitch:(CGFloat)pitch
+{
+    return MGLAltitudeForZoomLevel(zoomLevel, pitch, latitude, self.frame.size);
 }
 
 - (RCTMGLPointAnnotation*)getRCTPointAnnotation:(MGLPointAnnotation *)mglAnnotation
@@ -299,6 +317,18 @@ static double const M2PI = M_PI * 2;
     return touchableSources;
 }
 
+- (NSArray<RCTMGLShapeSource *> *)getAllShapeSources
+{
+    NSMutableArray<RCTMGLSource *> *shapeSources = [[NSMutableArray alloc] init];
+    
+    for (RCTMGLSource *source in _sources) {
+        if ([source isKindOfClass:[RCTMGLShapeSource class]]) {
+            [shapeSources addObject:source];
+        }
+    }
+    
+    return shapeSources;
+}
 - (RCTMGLSource *)getTouchableSourceWithHighestZIndex:(NSArray<RCTMGLSource *> *)touchableSources
 {
     if (touchableSources == nil || touchableSources.count == 0) {
@@ -336,18 +366,6 @@ static double const M2PI = M_PI * 2;
     return [NSURL URLWithString:styleURL];
 }
 
-- (void)_updateCameraIfNeeded:(BOOL)shouldUpdateCenterCoord
-{
-    if (shouldUpdateCenterCoord) {
-        [self setCenterCoordinate:[RCTMGLUtils fromFeature:_reactCenterCoordinate] animated:_animated];
-    } else {
-        MGLMapCamera *camera = [self.camera copy];
-        camera.pitch = _pitch;
-        camera.heading = _heading;
-        [self setCamera:camera animated:_animated];
-    }
-}
-
 - (void)_removeAllSourcesFromMap
 {
     if (self.style == nil || _sources.count == 0) {
@@ -356,6 +374,10 @@ static double const M2PI = M_PI * 2;
     for (RCTMGLSource *source in _sources) {
         source.map = nil;
     }
+}
+
+- (void)didChangeUserTrackingMode:(MGLUserTrackingMode)mode animated:(BOOL)animated {
+    [_reactCamera didChangeUserTrackingMode:mode animated:animated];
 }
 
 @end

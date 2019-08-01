@@ -49,9 +49,20 @@ public class BitmapUtils {
             addImage(url, bitmap);
         } catch (Exception e) {
             Log.w(LOG_TAG, e.getLocalizedMessage());
+            bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ALPHA_8); // Returns a transparent bitmap
         }
 
         return bitmap;
+    }
+
+    public static Bitmap getBitmapFromPath(String path, BitmapFactory.Options options) {
+        try {
+            Bitmap bitmap = BitmapFactory.decodeFile(path, options);
+            return bitmap;
+        } catch (Exception e) {
+            Log.w(LOG_TAG, e.getLocalizedMessage());
+            return Bitmap.createBitmap(1, 1, Bitmap.Config.ALPHA_8); // Returns a transparent bitmap
+        }
     }
 
     public static Bitmap getBitmapFromResource(Context context, String resourceName, BitmapFactory.Options options) {

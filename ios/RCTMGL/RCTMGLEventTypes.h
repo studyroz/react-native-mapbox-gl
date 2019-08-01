@@ -45,5 +45,6 @@ extern NSString *const RCT_MAPBOX_VECTOR_SOURCE_LAYER_PRESS;
 
 extern NSString *const RCT_MAPBOX_EVENT_DRAG;
 extern NSString *const RCT_MAPBOX_EVENT_DRAG_END;
+extern NSString *const RCT_MAPBOX_USER_LOCATION_UPDATE;
 
 @end

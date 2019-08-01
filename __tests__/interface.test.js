@@ -9,16 +9,21 @@ describe('Public Interface', () => {
       'StyleSheet',
       'Light',
       'PointAnnotation',
+      'Annotation',
       'Callout',
+      'Camera',
+      'UserLocation',
 
       // modules
       'offlineManager',
       'snapshotManager',
+      'locationManager',
 
       // layers
       'FillLayer',
       'FillExtrusionLayer',
       'CircleLayer',
+      'HeatmapLayer',
       'LineLayer',
       'SymbolLayer',
       'BackgroundLayer',
@@ -29,6 +34,7 @@ describe('Public Interface', () => {
       'ShapeSource',
       'RasterSource',
       'ImageSource',
+      'Images',
 
       // constants
       'UserTrackingModes',
@@ -65,7 +71,6 @@ describe('Public Interface', () => {
       'setAccessToken',
       'getAccessToken',
       'setTelemetryEnabled',
-      'isTelemetryEnabled',
       'requestAndroidLocationPermissions',
 
       // utils
@@ -73,7 +78,10 @@ describe('Public Interface', () => {
 
       // animated
       'Animated',
+
+      // helpers
+      'AnimatedPoint',
     ];
-    actualKeys.forEach((key) => expect(expectedKeys).toContain(key));
+    actualKeys.forEach(key => expect(expectedKeys).toContain(key));
   });
 });
