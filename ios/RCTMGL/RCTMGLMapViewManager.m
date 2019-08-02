@@ -235,7 +235,7 @@ RCT_EXPORT_METHOD(getCenter:(nonnull NSNumber*)reactTag
 
 RCT_EXPORT_METHOD(queryRenderedFeaturesAtPoint:(nonnull NSNumber*)reactTag
                   atPoint:(NSArray<NSNumber*>*)point
-                  withFilter:(NSArray<NSDictionary<NSString *, id> *> *)filter
+                  withFilter:(NSArray<NSString *> *)filter
                   withLayerIDs:(NSArray<NSString*>*)layerIDs
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
