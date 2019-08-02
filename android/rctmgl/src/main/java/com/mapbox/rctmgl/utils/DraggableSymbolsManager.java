@@ -142,13 +142,7 @@ public class DraggableSymbolsManager {
                                    MapboxMap mapboxMap,
                                    String symbolLayerID) {
         onSymbolDragListeners = new ArrayList<>();
-        androidGesturesManager = new AndroidGesturesManager(mapView.getContext(), false);
-        androidGesturesManager.setMoveGestureListener(
-                new MapMoveGestureListener(mapboxMap, symbolLayerID, 0, 0));
-    }
-
-    public void onParentTouchEvent(MotionEvent event) {
-        androidGesturesManager.onTouchEvent(event);
+        mapboxMap.getGesturesManager().setMoveGestureListener(new MapMoveGestureListener(mapboxMap, symbolLayerID, 0, 0));
     }
 
     public void addOnSymbolDragListener(OnSymbolDragListener listener) {

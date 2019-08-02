@@ -32,7 +32,6 @@ dependencies {
     // Mapbox SDK
 
     implementation 'com.mapbox.mapboxsdk:mapbox-sdk-services:4.8.0'
-    implementation 'com.mapbox.mapboxsdk:mapbox-android-gestures:0.2.0'
     implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:8.0.0'
 
     // Dependencies

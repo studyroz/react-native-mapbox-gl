@@ -201,9 +201,6 @@ public class RCTMGLMapView extends MapView implements
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        if (draggableSymbolsManager != null) {
-            draggableSymbolsManager.onParentTouchEvent(ev);
-        }
         return super.dispatchTouchEvent(ev);
     }
 
