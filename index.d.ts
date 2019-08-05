@@ -20,6 +20,10 @@ type Anchor = 'center' | 'left' | 'right' | 'top' | 'bottom' | 'top-left' | 'top
 type Visibility = 'visible' | 'none'
 type Alignment = 'map' | 'viewport';
 type AutoAlignment = Alignment | 'auto';
+type ZOrder = 'auto' | 'viewport-y' | 'source'
+type ExpressionZoom = any[]
+type ExpressionFeature = any[]
+type ExpressionFeatureState = any[]
 
 type NamedStyles<T> = { 
     [P in keyof T]: SymbolLayerStyle | RasterLayerStyle | LineLayerStyle | FillLayerStyle | 
@@ -30,16 +34,16 @@ declare namespace MapboxGL {
     function setAccessToken(accessToken: string): void;
     function getAccessToken(): Promise<void>;
     function setTelemetryEnabled(telemetryEnabled: boolean): void;
-
+    function setApiBaseUrl(url?: string): void
     /**
      * Components
      */
     class MapView extends Component<MapViewProps> {
         getPointInView(coordinate: Array<number>): Promise<void>;
         getCoordinateFromView(point: Array<number>): Promise<void>;
-        getVisibleBounds(): Promise<void>;
-        queryRenderedFeaturesAtPoint(coordinate: Array<number>, filter?: Array<string>, layerIds?: Array<string>): Promise<void>;
-        queryRenderedFeaturesInRect(coordinate: Array<number>, filter?: Array<string>, layerIds?: Array<string>): Promise<void>;
+        getVisibleBounds(): Promise<number[][]>;
+        queryRenderedFeaturesAtPoint(coordinate: Array<number>, filter?: any[], layerIds?: Array<string>): Promise<GeoJSON.FeatureCollection>;
+        queryRenderedFeaturesInRect(coordinate: Array<number>, filter?: any[], layerIds?: Array<string>): Promise<GeoJSON.FeatureCollection>;
         fitBounds(northEastCoordinates: Array<number>, southWestCoordinates: Array<number>, padding?: number, duration?: number): void;
         flyTo(coordinates: Array<number>, duration?: number): void;
         moveTo(coordinates: Array<number>, duration?: number): void;
@@ -48,18 +52,27 @@ declare namespace MapboxGL {
         takeSnap(writeToDisk: boolean): Promise<string>;
         getZoom(): Promise<number>;
         getCenter(): Promise<Array<number>>;
+        setGeoJSON: (id: string, json: string) => void
+    }
+
+    class Camera extends Component {
+        fitBounds: (
+            northEastCoordinates: Coordinate,
+            southWestCoordinates: Coordinate,
+            padding?: number | number[],
+            duration?: number
+          ) => void
+        flyTo: (coordinate: Coordinate, duration?: number) => Promise<void>
+        moveTo: (coordinate: Coordinate, duration?: number) => Promise<void>
+        zoomTo: (zoomLevel: number, duration?: number) => Promise<void>
+        setCamera: (config: CameraConfig) => Promise<void>
+    }
+
+    class Images extends Component<ImagesProps> {
+
     }
 
     class Light extends Component<LightProps> { }
-
-    class StyleSheet extends Component {
-        static create<T extends NamedStyles<T> | NamedStyles<any>>(styles: T): void;        
-        camera(stops: {[key: number]: string}, interpolationMode?: InterpolationMode): void;
-        source(stops: {[key: number]: string}, attributeName: string, interpolationMode?: InterpolationMode): void;
-        composite(stops: {[key: number]: string}, attributeName: string, interpolationMode?: InterpolationMode): void;
-
-        identity(attributeName: string): number;
-    }
 
     class PointAnnotation extends Component<PointAnnotationProps> { }
     class Callout extends Component<CalloutProps> { }
@@ -160,11 +173,15 @@ interface MapViewProps extends ViewProperties {
     regionWillChangeDebounceTime?: number;
     regionDidChangeDebounceTime?: number;
 
-    onPress?: () => void;
-    onLongPress?: () => void;
-    onRegionWillChange?: () => void;
-    onRegionIsChanging?: () => void;
-    onRegionDidChange?: () => void;
+    draggableLayerID?: string
+
+    onPress?: (payload: OnPressPayloadInternal) => void;
+    onLongPress?: (payload: OnPressPayloadInternal) => void;
+    onDrag?: (payload: OnDragPayloadInternal) => void
+    onDragEnd?: (payload: OnDragPayloadInternal) => void
+    onRegionWillChange?: (payload: RegionChangePayloadInternal) => void;
+    onRegionIsChanging?: (payload: RegionChangePayloadInternal) => void;
+    onRegionDidChange?: (payload: RegionChangePayloadInternal) => void;
     onUserLocationUpdate?: () => void;
     onWillStartLoadingMap?: () => void;
     onDidFinishLoadingMap?: () => void;
@@ -179,138 +196,192 @@ interface MapViewProps extends ViewProperties {
     onUserTrackingModeChange?: () => void;
 }
 
-interface LightStyle {
+export interface ImagesProps {
+    images?: ImageAssetsProps
+}
+
+export interface ImageAssetsProps {
+    assets: string[]
+}
+
+interface CameraConfig {
+    centerCoordinate?: Coordinate
+    zoomLevel?: number
+    animationDuration?: number
+    stops?: any[]
+}
+
+type Coordinate = number[] // 数量为2，第一个是long，第二个是lat
+
+interface Geometry {
+    type: string
+    coordinates: Coordinate
+}
+
+interface LocationChangeProperties {
+    animated: boolean
+    heading: number
+    pitch: number
+    isUserInteraction: boolean
+    zoomLevel: number
+    visibleBounds: number[][]
+}
+
+interface PressProperties {
+    screenPointX: number
+    screenPointY: number
+}
+export interface RegionChangePayloadInternal {
+    type: string
+    geometry: Geometry
+    properties: LocationChangeProperties
+}
+
+export interface OnPressPayloadInternal {
+    type: string
+    geometry: Geometry
+    properties: PressProperties
+}
+
+export interface OnDragPayloadInternal {
+    coordinate: [number, number]
+    id: string
+}
+
+export interface LightStyle {
     anchor?: Alignment;
     position?: Array<number>;
     color?: string;
     intensity?: number;
 }
 
-interface BackgroundLayerStyle {
+export interface BackgroundLayerStyle {
     visibility?: Visibility;
-    backgroundColor?: string;
-    backgroundPattern?: string;
-    backgroundOpacity?: number;
+    backgroundColor?: string | ExpressionZoom;
+    backgroundPattern?: string | ExpressionZoom;
+    backgroundOpacity?: number | ExpressionZoom;
 }
 
 export interface CircleLayerStyle {
     visibility?: Visibility;
-    circleRadius?: number;
-    circleColor?: string;
-    circleBlur?: number;
-    circleOpacity?: number;
-    circleTranslate?: Array<number>;
-    circleTranslateAnchor?: Alignment;
-    circlePitchScale?: Alignment;
-    circlePitchAlignment?: Alignment;
-    circleStrokeWidth?: number;
-    circleStrokeColor?: string;
-    circleStrokeOpacity?: number;
+    circleRadius?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    circleColor?: string | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    circleBlur?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    circleOpacity?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    circleTranslate?: Array<number> | ExpressionZoom;
+    circleTranslateAnchor?: Alignment | ExpressionZoom;
+    circlePitchScale?: Alignment | ExpressionZoom;
+    circlePitchAlignment?: Alignment | ExpressionZoom;
+    circleStrokeWidth?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    circleStrokeColor?: string | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    circleStrokeOpacity?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
 }
 
-interface FillExtrusionLayerStyle {
+export interface FillExtrusionLayerStyle {
     visibility?: Visibility;
-    fillExtrusionColor?: string;
-    fillExtrusionOpacity?: number;
-    fillExtrusionTranslate?: Array<number>;
-    fillExtrusionTranslateAnchor?: Alignment;
-    fillExtrusionPattern?: string;
-    fillExtrusionHeight?: number;
-    fillExtrusionBase?: number;
+    fillExtrusionOpacity?: number | ExpressionZoom;
+    fillExtrusionColor?: string | ExpressionZoom;
+    fillExtrusionTranslate?: Array<number> | ExpressionZoom;
+    fillExtrusionTranslateAnchor?: Alignment | ExpressionZoom;
+    fillExtrusionPattern?: string | ExpressionZoom | ExpressionFeature;
+    fillExtrusionHeight?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    fillExtrusionBase?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
 }
 
-interface FillLayerStyle {
+export interface FillLayerStyle {
     visibility?: Visibility;
-    fillAntialias?: boolean;
-    fillOpacity?: number;
-    fillColor?: string;
-    fillOutlineColor?: string;
-    fillTranslate?: Array<number>;
-    fillTranslateAnchor?: Alignment;
-    fillPattern?: string;
+    fillAntialias?: boolean | ExpressionZoom;
+    fillOpacity?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    fillColor?: string | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    fillOutlineColor?: string | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    fillTranslate?: Array<number> | ExpressionZoom;
+    fillTranslateAnchor?: Alignment | ExpressionZoom;
+    fillPattern?: string | ExpressionZoom | ExpressionFeature;
 }
 
-interface LineLayerStyle {
-    lineCap?: 'butt' | 'round' | 'square';
-    lineJoin?: 'bevel' | 'round' | 'miter';
-    lineMiterLimit?: number;
-    lineRoundLimit?: number;
+export interface LineLayerStyle {
+    lineCap?: 'butt' | 'round' | 'square' | ExpressionZoom;
+    lineJoin?: 'bevel' | 'round' | 'miter' | ExpressionZoom;
+    lineMiterLimit?: number | ExpressionZoom;
+    lineRoundLimit?: number | ExpressionZoom;
     visibility?: Visibility;
-    lineOpacity?: number;
-    lineColor?: string;
-    lineTranslate?: Array<number>;
-    lineTranslateAnchor?: Alignment;
-    lineWidth?: number;
-    lineGapWidth?: number;
-    lineOffset?: number;
-    lineBlur?: number;
-    lineDasharray?: Array<number>;
-    linePattern?: string;
+    lineOpacity?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    lineColor?: string | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    lineTranslate?: Array<number> | ExpressionZoom;
+    lineTranslateAnchor?: Alignment | ExpressionZoom;
+    lineWidth?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    lineGapWidth?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    lineOffset?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    lineBlur?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    lineDasharray?: Array<number> | ExpressionZoom;
+    linePattern?: string | ExpressionZoom | ExpressionFeature;
 }
 
-interface RasterLayerStyle {
+export interface RasterLayerStyle {
     visibility?: Visibility;
-    rasterOpacity?: number;
-    rasterHueRotate?: number;
-    rasterBrightnessMin?: number;
-    rasterBrightnessMax?: number;
-    rasterSaturation?: number;
-    rasterContrast?: number;
-    rasterFadeDuration?: number;
+    rasterOpacity?: number | ExpressionZoom;
+    rasterHueRotate?: number | ExpressionZoom;
+    rasterBrightnessMin?: number | ExpressionZoom;
+    rasterBrightnessMax?: number | ExpressionZoom;
+    rasterSaturation?: number | ExpressionZoom;
+    rasterContrast?: number | ExpressionZoom;
+    rasterResampling?: 'linear' | 'nearest' | ExpressionZoom;
+    rasterFadeDuration?: number | ExpressionZoom;
 }
 
-interface SymbolLayerStyle {
-    symbolPlacement?: 'point' | 'line';
-    symbolSpacing?: number;
-    symbolAvoidEdges?: boolean;
-    iconAllowOverlap?: boolean;
-    iconIgnorePlacement?: boolean;
-    iconOptional?: boolean;
-    iconRotationAlignment?: AutoAlignment;
-    iconSize?: number;
-    iconTextFit?: 'none' | 'width' | 'height' | 'both';
-    iconTextFitPadding?: Array<number>;
-    iconImage?: string;
-    iconRotate?: number;
-    iconPadding?: number;
-    iconKeepUpright?: boolean;
-    iconOffset?: Array<number>
-    iconAnchor?: Anchor;
-    iconPitchAlignment?: AutoAlignment;
-    textPitchAlignment?: AutoAlignment;
-    textRotationAlignment?: AutoAlignment;
-    textField?: string;
-    textFont?: Array<string>;
-    textSize?: number;
-    textMaxWidth?: number;
-    textLineHeight?: number;
-    textLetterSpacing?: number;
-    textJustify?: 'left' | 'center' | 'right';
-    textAnchor?: Anchor;
-    textMaxAngle?: number;
-    textRotate?: number;
-    textPadding?: number;
-    textKeepUpright?: boolean;
-    textTransform?: 'none' | 'uppercase' | 'lowercase';
-    textOffset?: Array<number>;
-    textAllowOverlap?: boolean;
-    textIgnorePlacement?: boolean;
-    textOptional?: boolean;
+export interface SymbolLayerStyle {
+    symbolPlacement?: 'point' | 'line' | ExpressionZoom;
+    symbolSpacing?: number | ExpressionZoom;
+    symbolAvoidEdges?: boolean | ExpressionZoom;
+    symbolZOrder?: ZOrder | ExpressionZoom;
+    iconAllowOverlap?: boolean | ExpressionZoom;
+    iconIgnorePlacement?: boolean | ExpressionZoom;
+    iconOptional?: boolean | ExpressionZoom;
+    iconRotationAlignment?: AutoAlignment | ExpressionZoom;
+    iconSize?: number | ExpressionZoom | ExpressionFeature;
+    iconTextFit?: 'none' | 'width' | 'height' | 'both' | ExpressionZoom;
+    iconTextFitPadding?: Array<number> | ExpressionZoom;
+    iconImage?: string | ExpressionZoom | ExpressionFeature;
+    iconRotate?: number | ExpressionZoom | ExpressionFeature;
+    iconPadding?: number | ExpressionZoom;
+    iconKeepUpright?: boolean | ExpressionZoom;
+    iconOffset?: Array<number>  | ExpressionZoom | ExpressionFeature;
+    iconAnchor?: Anchor | ExpressionZoom | ExpressionFeature;
+    iconPitchAlignment?: AutoAlignment | ExpressionZoom;
+    textPitchAlignment?: AutoAlignment | ExpressionZoom;
+    textRotationAlignment?: AutoAlignment | ExpressionZoom;
+    textField?: string | ExpressionZoom;
+    textFont?: Array<string> | ExpressionZoom | ExpressionFeature;
+    textSize?: number | ExpressionZoom | ExpressionFeature;
+    textMaxWidth?: number | ExpressionZoom | ExpressionFeature;
+    textLineHeight?: number | ExpressionZoom;
+    textLetterSpacing?: number | ExpressionZoom | ExpressionFeature;
+    textJustify?: 'left' | 'center' | 'right' | 'auto' | ExpressionZoom | ExpressionFeature;
+    textAnchor?: Anchor | ExpressionZoom | ExpressionFeature;
+    textMaxAngle?: number | ExpressionZoom;
+    textRotate?: number | ExpressionZoom | ExpressionFeature;
+    textPadding?: number | ExpressionZoom;
+    textKeepUpright?: boolean | ExpressionZoom;
+    textTransform?: 'none' | 'uppercase' | 'lowercase' | ExpressionZoom | ExpressionFeature;
+    textOffset?: Array<number> | ExpressionZoom | ExpressionFeature;
+    textAllowOverlap?: boolean | ExpressionZoom;
+    textIgnorePlacement?: boolean | ExpressionZoom;
+    textOptional?: boolean | ExpressionZoom;
     visibility?: Visibility;
-    iconOpacity?: number;
-    iconColor?: string;
-    iconHaloColor?: string;
-    iconHaloWidth?: number;
-    iconHaloBlur?: number;
-    iconTranslate?: Array<number>
-    iconTranslateAnchor?: Alignment;
-    textOpacity?: number;
-    textColor?: string;
-    textHaloColor?: string;
-    textHaloWidth?: number;
-    textHaloBlur?: number;
-    textTranslate?: Array<number>;
-    textTranslateAnchor?: Alignment;
+    iconOpacity?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    iconColor?: string | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    iconHaloColor?: string | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    iconHaloWidth?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    iconHaloBlur?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    iconTranslate?: Array<number> | ExpressionZoom;
+    iconTranslateAnchor?: Alignment | ExpressionZoom;
+    textOpacity?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    textColor?: string | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    textHaloColor?: string | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    textHaloWidth?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    textHaloBlur?: number | ExpressionZoom | ExpressionFeature | ExpressionFeatureState;
+    textTranslate?: Array<number> | ExpressionZoom;
+    textTranslateAnchor?: Alignment | ExpressionZoom;
 }
 
 interface Point {
@@ -359,13 +430,12 @@ interface ShapeSourceProps {
     maxZoomLevel?: number;
     buffer?: number;
     tolerance?: number;
-    images?: any;
-    onPress?: () => void;
-    hitbox: any;
+    onPress?: (e: any) => void;
+    hitbox?: any;
 }
 
 interface RasterSourceProps {
-    id?: MapboxGL.StyleSource;
+    id?: string;
     url?: string;
     minZoomLevel?: number;
     maxZoomLevel?: number;
@@ -381,40 +451,40 @@ interface LayerBaseProps {
     aboveLayerID?: string;
     belowLayerID?: string;
     layerIndex?: number;
-    filter?: Array<string>;
+    filter?: any[];
     minZoomLevel?: number;
     maxZoomLevel?: number;
 }
 
-interface BackgroundLayerProps extends LayerBaseProps {
+export interface BackgroundLayerProps extends LayerBaseProps {
     style?: BackgroundLayerStyle;
 }
 
-interface CircleLayerProps extends LayerBaseProps {
+export interface CircleLayerProps extends LayerBaseProps {
     style?: CircleLayerStyle;
 }
 
-interface FillExtrusionLayerProps extends LayerBaseProps {
+export interface FillExtrusionLayerProps extends LayerBaseProps {
     style?: FillExtrusionLayerStyle;
 }
 
-interface FillLayerProps extends LayerBaseProps {
+export interface FillLayerProps extends LayerBaseProps {
     style?: FillLayerStyle;
 }
 
-interface LineLayerProps extends LayerBaseProps {
+export interface LineLayerProps extends LayerBaseProps {
     style?: LineLayerStyle;
 }
 
-interface RasterLayerProps extends LayerBaseProps {
+export interface RasterLayerProps extends LayerBaseProps {
     style?: RasterLayerStyle;
 }
 
-interface SymbolLayerProps extends LayerBaseProps {
+export interface SymbolLayerProps extends LayerBaseProps {
     style?: SymbolLayerStyle;
 }
 
-interface OfflineCreatePackOptions {
+export interface OfflineCreatePackOptions {
     name?: string;
     styleURL?: MapboxGL.StyleURL;
     bounds?: Array<number>;
@@ -423,7 +493,7 @@ interface OfflineCreatePackOptions {
     metadata?: any;
 }
 
-interface SnapshotOptions {
+export interface SnapshotOptions {
     centerCoordinate?: Array<number>;
     width?: number;
     height?: number;
