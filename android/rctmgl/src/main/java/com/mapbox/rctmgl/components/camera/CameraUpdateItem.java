@@ -1,6 +1,6 @@
 package com.mapbox.rctmgl.components.camera;
 
-import androidx.annotation.NonNull;
+import android.support.annotation.NonNull;
 
 import com.mapbox.mapboxsdk.camera.CameraUpdate;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
