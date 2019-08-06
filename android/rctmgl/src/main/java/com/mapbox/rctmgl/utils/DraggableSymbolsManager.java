@@ -80,8 +80,7 @@ public class DraggableSymbolsManager {
                 List<Feature> features = mapboxMap.queryRenderedFeatures(rect, symbolLayerID);
                 if (!features.isEmpty()) {
                     draggedSymbolID = features.get(0).id();
-                    saveGesturesContext();
-                    mapboxMap.getUiSettings().setAllGesturesEnabled(false);
+                    mapboxMap.getGesturesManager().getMoveGestureDetector().setEnabled(false);
                 }
             }
 
@@ -107,31 +106,7 @@ public class DraggableSymbolsManager {
             latestLatLng = null;
             draggedSymbolID = null;
             querySymbol = false;
-            restoreGesturesContext();
-        }
-
-        private void saveGesturesContext() {
-            UiSettings settings = mapboxMap.getUiSettings();
-            gesturesContext = new GesturesContext(
-                    settings.isScrollGesturesEnabled(),
-                    settings.isRotateGesturesEnabled(),
-                    settings.isTiltGesturesEnabled(),
-                    settings.isZoomGesturesEnabled(),
-                    settings.isDoubleTapGesturesEnabled()
-            );
-        }
-
-        private void restoreGesturesContext() {
-            if (gesturesContext == null) {
-                return;
-            }
-            UiSettings settings = mapboxMap.getUiSettings();
-            settings.setScrollGesturesEnabled(gesturesContext.scrollGesturesEnabled);
-            settings.setRotateGesturesEnabled(gesturesContext.rotateGesturesEnabled);
-            settings.setTiltGesturesEnabled(gesturesContext.tiltGesturesEnabled);
-            settings.setZoomGesturesEnabled(gesturesContext.zoomGesturesEnabled);
-            settings.setDoubleTapGesturesEnabled(gesturesContext.doubleTapGesturesEnabled);
-            gesturesContext = null;
+            mapboxMap.getGesturesManager().getMoveGestureDetector().setEnabled(true);
         }
     }
 
@@ -142,7 +117,14 @@ public class DraggableSymbolsManager {
                                    MapboxMap mapboxMap,
                                    String symbolLayerID) {
         onSymbolDragListeners = new ArrayList<>();
-        mapboxMap.getGesturesManager().setMoveGestureListener(new MapMoveGestureListener(mapboxMap, symbolLayerID, 0, 0));
+        androidGesturesManager = new AndroidGesturesManager(mapView.getContext(), false);
+        androidGesturesManager.setMoveGestureListener(
+            new MapMoveGestureListener(mapboxMap, symbolLayerID, 0, 0)
+        );
+    }
+
+    public void onParentTouchEvent(MotionEvent event) {
+        androidGesturesManager.onTouchEvent(event);
     }
 
     public void addOnSymbolDragListener(OnSymbolDragListener listener) {
