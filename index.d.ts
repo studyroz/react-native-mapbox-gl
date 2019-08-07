@@ -157,7 +157,7 @@ interface MapViewProps extends ViewProperties {
     heading?: number;
     pitch?: number;
     style?: any;
-    styleURL?: MapboxGL.StyleURL;
+    styleURL?: MapboxGL.StyleURL | string;
     zoomLevel?: number;
     minZoomLevel?: number;
     maxZoomLevel?: number;
