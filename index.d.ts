@@ -55,7 +55,7 @@ declare namespace MapboxGL {
         setGeoJSON: (id: string, json: string) => void
     }
 
-    class Camera extends Component {
+    class Camera extends Component<CameraProps> {
         fitBounds: (
             northEastCoordinates: Coordinate,
             southWestCoordinates: Coordinate,
@@ -196,6 +196,41 @@ interface MapViewProps extends ViewProperties {
     onUserTrackingModeChange?: () => void;
 }
 
+interface Bounds {
+    ne: number[]
+    sw: number[]
+    paddingLeft?: number
+    paddingRight?: number
+    paddingTop?: number
+    paddingBottom?: number
+}
+interface CameraSettings {
+    centerCoordinate?: number[]
+    heading?: number
+    pitch?: number
+    bounds?: Bounds
+    zoomLevel?: number
+}
+export interface CameraProps {
+    animationDuration?: number
+    animationMode?: 'easeTo' | 'flyTo' | 'moveTo'
+    defaultSettings?: CameraSettings
+    centerCoordinate?: number[]
+    heading?: number
+    pitch?: number
+    bounds?: Bounds
+    zoomLevel?: number
+    minZoomLevel?: number
+    maxZoomLevel?: number
+    followUserLocation?: boolean
+    followUserMode?: 'normal' | 'compass' | 'course'
+    followZoomLevel?: number
+    followPitch?: number
+    followHeading?: number
+    triggerKey?: any
+    alignment?: any[]
+    isUserInteraction?: boolean
+}
 export interface ImagesProps {
     images?: ImageAssetsProps
 }
