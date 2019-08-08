@@ -253,6 +253,12 @@ static double const M2PI = M_PI * 2;
     _reactDraggableLayerID = reactDraggableLayerID;
 }
 
+- (void)setReactPreferredFramesPerSecond:(NSInteger *)reactPreferredFramesPerSecond
+{    
+    self.preferredFramesPerSecond = reactPreferredFramesPerSecond;
+}
+
+
 #pragma mark - methods
 
 - (NSString *)takeSnap:(BOOL)writeToDisk

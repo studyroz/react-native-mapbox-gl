@@ -13,6 +13,7 @@ import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeMap;
+import com.facebook.react.module.annotations.ReactModule;
 import com.facebook.react.modules.core.RCTNativeAppEventEmitter;
 import com.mapbox.geojson.FeatureCollection;
 // import com.mapbox.mapboxsdk.constants.Style;
@@ -42,8 +43,9 @@ import java.util.Locale;
  * Created by nickitaliano on 10/24/17.
  */
 
+@ReactModule(name = RCTMGLOfflineModule.REACT_CLASS)
 public class RCTMGLOfflineModule extends ReactContextBaseJavaModule {
-    public static final String REACT_CLASS = RCTMGLOfflineModule.class.getSimpleName();
+    public static final String REACT_CLASS = "RCTMGLOfflineModule";
 
     public static final int INACTIVE_REGION_DOWNLOAD_STATE = OfflineRegion.STATE_INACTIVE;
     public static final int ACTIVE_REGION_DOWNLOAD_STATE = OfflineRegion.STATE_ACTIVE;
@@ -198,6 +200,9 @@ public class RCTMGLOfflineModule extends ReactContextBaseJavaModule {
                     Log.w(REACT_CLASS, "deleteRegion - Unknown offline region");
                     return;
                 }
+
+                // stop download before deleting (https://github.com/mapbox/mapbox-gl-native/issues/12382#issuecomment-431055103)
+                region.setDownloadState(INACTIVE_REGION_DOWNLOAD_STATE);
 
                 region.delete(new OfflineRegion.OfflineRegionDeleteCallback() {
                     @Override

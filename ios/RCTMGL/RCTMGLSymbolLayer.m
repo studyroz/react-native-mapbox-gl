@@ -106,6 +106,17 @@
             layer.iconImageName = [NSExpression expressionForConstantValue:self.id];
         }
     }
+    
+    if (_snapshot == YES) {
+        UIImage *image = [self _createViewSnapshot];
+        
+        if (image != nil) {
+            [self.style setImage:image forName:self.id];
+            
+            MGLSymbolStyleLayer *layer = (MGLSymbolStyleLayer *)self.styleLayer;
+            layer.iconImageName = [NSExpression expressionForConstantValue:self.id];
+        }
+    }
 }
 
 - (MGLSymbolStyleLayer*)makeLayer:(MGLStyle*)style

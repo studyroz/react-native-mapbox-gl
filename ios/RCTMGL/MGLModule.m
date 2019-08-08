@@ -42,7 +42,7 @@ RCT_EXPORT_MODULE();
     [eventTypes setObject:RCT_MAPBOX_REGION_DID_CHANGE forKey:@"RegionDidChange"];
     [eventTypes setObject:RCT_MAPBOX_WILL_START_LOADING_MAP forKey:@"WillStartLoadingMap"];
     [eventTypes setObject:RCT_MAPBOX_DID_FINISH_LOADING_MAP forKey:@"DidFinishLoadingMap"];
-    [eventTypes setObject:RCT_MAPBOX_DID_FAIL_LOADING_MAP forKey:@"DidFailLaodingMap"];
+    [eventTypes setObject:RCT_MAPBOX_DID_FAIL_LOADING_MAP forKey:@"DidFailLoadingMap"];
     [eventTypes setObject:RCT_MAPBOX_WILL_START_RENDERING_FRAME forKey:@"WillStartRenderingFrame"];
     [eventTypes setObject:RCT_MAPBOX_DID_FINSIH_RENDERING_FRAME forKey:@"DidFinishRenderingFrame"];
     [eventTypes setObject:RCT_MAPBOX_DID_FINISH_RENDERING_FRAME_FULLY forKey:@"DidFinishRenderingFrameFully"];
@@ -241,6 +241,16 @@ RCT_EXPORT_METHOD(setAccessToken:(NSString *)accessToken)
     [MGLAccountManager setAccessToken:accessToken];
 }
 
+RCT_EXPORT_METHOD(addCustomHeader:(NSString *)headerName forHeaderValue:(NSString *) headerValue)
+{
+    // do nothing for now
+}
+
+RCT_EXPORT_METHOD(removeCustomHeader:(NSString *)headerName)
+{
+    // do nothing for now
+}
+
 RCT_EXPORT_METHOD(getAccessToken:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 {
     NSString *accessToken = MGLAccountManager.accessToken;
@@ -262,12 +272,6 @@ RCT_EXPORT_METHOD(setApiBaseUrl:(NSString *)url)
          withObject:[NSURL URLWithString:url]
          waitUntilDone:true];
     }
-}
-
-RCT_EXPORT_METHOD(setTelemetryEnabled:(BOOL *)telemetryEnabled)
-{
-    [[NSUserDefaults standardUserDefaults] setBool:telemetryEnabled
-                                            forKey:@"MGLMapboxMetricsEnabled"];
 }
 
 @end

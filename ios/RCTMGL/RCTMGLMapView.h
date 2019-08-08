@@ -47,6 +47,7 @@ typedef void (^FoundLayerBlock) (MGLStyleLayer* layer);
 
 @property (nonatomic, copy) NSString *reactStyleURL;
 @property (nonatomic, copy) NSString *reactDraggableLayerID;
+@property (nonatomic, assign) NSInteger *reactPreferredFramesPerSecond;
 
 @property (nonatomic, assign) BOOL isUserInteraction;
 

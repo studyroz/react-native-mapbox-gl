@@ -9,7 +9,6 @@ import com.facebook.react.common.MapBuilder;
 import com.facebook.react.uimanager.LayoutShadowNode;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.annotations.ReactProp;
-import com.facebook.react.uimanager.events.Event;
 import com.mapbox.mapboxsdk.geometry.LatLngBounds;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.MapboxMapOptions;
@@ -18,7 +17,6 @@ import com.mapbox.rctmgl.events.constants.EventKeys;
 import com.mapbox.rctmgl.utils.ConvertUtils;
 import com.mapbox.rctmgl.utils.ExpressionParser;
 import com.mapbox.rctmgl.utils.GeoJSONUtils;
-import com.mapbox.rctmgl.modules.RCTMGLModule;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.Point;
 
@@ -39,7 +37,7 @@ import static com.facebook.react.bridge.UiThreadUtil.runOnUiThread;
 
 public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
     public static final String LOG_TAG = RCTMGLMapViewManager.class.getSimpleName();
-    public static final String REACT_CLASS = RCTMGLMapView.class.getSimpleName();
+    public static final String REACT_CLASS = "RCTMGLMapView";
 
     private Map<Integer, RCTMGLMapView> mViews;
 
@@ -119,6 +117,11 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
     @ReactProp(name="styleURL")
     public void setStyleURL(RCTMGLMapView mapView, String styleURL) {
         mapView.setReactStyleURL(styleURL);
+    }
+
+    @ReactProp(name="preferredFramesPerSecond")
+    public void setPreferredFramesPerSecond(RCTMGLMapView mapView, int preferredFramesPerSecond) {
+        mapView.setReactPreferredFramesPerSecond(preferredFramesPerSecond);
     }
 
     @ReactProp(name="localizeLabels")

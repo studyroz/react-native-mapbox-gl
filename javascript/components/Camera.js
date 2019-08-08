@@ -6,8 +6,6 @@ import locationManager from '../modules/location/locationManager';
 import {isNumber, toJSONString, viewPropTypes, existenceChange} from '../utils';
 import * as geoUtils from '../utils/geoUtils';
 
-import NativeBridgeComponent from './NativeBridgeComponent';
-
 const MapboxGL = NativeModules.MGLModule;
 
 export const NATIVE_MODULE_NAME = 'RCTMGLCamera';
@@ -66,7 +64,7 @@ const SettingsPropTypes = {
   zoomLevel: PropTypes.number,
 };
 
-class Camera extends NativeBridgeComponent {
+class Camera extends React.Component {
   static propTypes = {
     ...viewPropTypes,
 
@@ -111,7 +109,7 @@ class Camera extends NativeBridgeComponent {
     Ease: 'easeTo',
   };
 
-  componentWillReceiveProps(nextProps) {
+  UNSAFE_componentWillReceiveProps(nextProps) {
     this._handleCameraChange(this.props, nextProps);
   }
 
@@ -230,7 +228,7 @@ class Camera extends NativeBridgeComponent {
       cB.sw[0] !== nB.sw[0] ||
       cB.sw[1] !== nB.sw[1] ||
       cB.paddingTop != nB.paddingTop ||
-      cB.paddingLeft != nB.pddingLeft ||
+      cB.paddingLeft != nB.paddingLeft ||
       cB.paddingRight != nB.paddingRight ||
       cB.paddingBottom != nB.paddingBottom
     );

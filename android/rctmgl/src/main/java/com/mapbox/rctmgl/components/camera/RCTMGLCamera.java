@@ -17,9 +17,6 @@ import com.mapbox.mapboxsdk.location.LocationComponent;
 import com.mapbox.mapboxsdk.location.LocationComponentOptions;
 import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions;
 // import com.mapbox.mapboxsdk.plugins.locationlayer.LocationLayerPlugin;
-import com.mapbox.mapboxsdk.style.layers.Layer;
-import com.mapbox.mapboxsdk.style.layers.Property;
-import com.mapbox.mapboxsdk.style.layers.PropertyFactory;
 import com.mapbox.rctmgl.components.AbstractMapFeature;
 import com.mapbox.rctmgl.components.mapview.RCTMGLMapView;
 import com.mapbox.rctmgl.events.IEvent;
@@ -27,7 +24,6 @@ import com.mapbox.rctmgl.events.MapUserTrackingModeEvent;
 import com.mapbox.rctmgl.events.MapChangeEvent;
 import com.mapbox.rctmgl.location.LocationManager;
 import com.mapbox.rctmgl.location.UserLocation;
-import com.mapbox.rctmgl.location.UserLocationLayerConstants;
 import com.mapbox.rctmgl.location.UserLocationVerticalAlignment;
 import com.mapbox.rctmgl.location.UserTrackingMode;
 import com.mapbox.rctmgl.location.UserTrackingState;
@@ -44,7 +40,7 @@ import com.mapbox.geojson.Point;
 
 import com.mapbox.android.core.permissions.PermissionsManager;
 
-import androidx.annotation.NonNull;
+import android.support.annotation.NonNull;
 
 public class RCTMGLCamera extends AbstractMapFeature {
     private RCTMGLCameraManager mManager;
@@ -135,10 +131,10 @@ public class RCTMGLCamera extends AbstractMapFeature {
         mMapView = mapView;
 
         setInitialCamera();
+        updateMaxMinZoomLevel();
         if (mCameraStop != null) {
             updateCamera();
         }
-        updateMaxMinZoomLevel();
 
         if (mShowUserLocation || mFollowUserLocation) {
             enableLocation();
@@ -250,7 +246,7 @@ public class RCTMGLCamera extends AbstractMapFeature {
         if(location == null){
             return;
         }
-        IEvent event = new MapChangeEvent(this, makeLocationChangePayload(location), EventTypes.USER_LOCATION_UPDATED);
+        IEvent event = new MapChangeEvent(this, EventTypes.USER_LOCATION_UPDATED, makeLocationChangePayload(location));
         mManager.handleEvent(event);
     }
 
@@ -359,11 +355,13 @@ public class RCTMGLCamera extends AbstractMapFeature {
 
     private void updateLocationLayer(@NonNull Style style) {
         if (mLocationComponent == null) {
-            mLocationComponent = getMapboxMap().getLocationComponent();
+            MapboxMap mapboxMap = getMapboxMap();
+            mLocationComponent = mapboxMap.getLocationComponent();
 
             LocationComponentOptions.Builder builder = LocationComponentOptions.builder(mContext);
             if (!mShowUserLocation) {
                 builder = builder
+                        .padding(mapboxMap.getPadding())
                         .backgroundDrawable(R.drawable.empty)
                         .backgroundDrawableStale(R.drawable.empty)
                         .bearingDrawable(R.drawable.empty)
