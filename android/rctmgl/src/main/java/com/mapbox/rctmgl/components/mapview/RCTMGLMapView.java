@@ -55,6 +55,7 @@ import com.mapbox.rctmgl.events.MapDragEndEvent;
 import com.mapbox.rctmgl.events.MapDragEvent;
 import com.mapbox.rctmgl.events.constants.EventTypes;
 import com.mapbox.rctmgl.utils.BitmapUtils;
+import com.mapbox.rctmgl.utils.DraggableSymbolsManager;
 import com.mapbox.rctmgl.utils.GeoJSONUtils;
 import com.mapbox.rctmgl.utils.GeoViewport;
 
@@ -880,7 +881,6 @@ public class RCTMGLMapView extends MapView implements
         } catch (Exception e) {
             e.printStackTrace();
         }
-        event.setPayload(payload);
 
         AndroidCallbackEvent event = new AndroidCallbackEvent(this, callbackID, payload);
         mManager.handleEvent(event);
