@@ -252,7 +252,7 @@ public abstract class RCTLayer<T extends Layer> extends AbstractMapFeature {
 
     @Override
     public void removeFromMap(RCTMGLMapView mapView) {
-        if (mMap.getStyle() != null) {
+        if (mMap != null && mMap.getStyle() != null) {
             mMap.getStyle().removeLayer(mLayer);
         }
     }
