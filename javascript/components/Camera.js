@@ -288,7 +288,7 @@ class Camera extends React.Component {
         ...pad,
       },
       animationDuration,
-      animationMode: animationDuration === 0.0 ? Camera.Mode.Move : Camera.Mode.Ease,
+      animationMode: Camera.Mode.Ease,
     });
   }
 
