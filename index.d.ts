@@ -32,6 +32,7 @@ declare namespace MapboxGL {
     function setAccessToken(accessToken: string): void;
     function getAccessToken(): Promise<void>;
     function setTelemetryEnabled(telemetryEnabled: boolean): void;
+    function setApiBaseUrl(url: string | undefined): void
 
     /**
      * Components
