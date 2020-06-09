@@ -91,7 +91,7 @@ class ShowPointAnnotation extends React.Component {
     for (let i = 0; i < this.state.coordinates.length; i++) {
       const coordinate = this.state.coordinates[i];
 
-      const title = `Longitude: ${coordinate[0]} Latitude: ${coordinate[1]}`;
+      const title = `Lon: ${coordinate[0]} Lat: ${coordinate[1]}`;
       const id = `pointAnnotation${i}`;
 
       const animationStyle = {};
@@ -106,8 +106,7 @@ class ShowPointAnnotation extends React.Component {
           key={id}
           id={id}
           coordinate={coordinate}
-          title="This is a point ann"
-        >
+          title={title}>
           <View style={styles.annotationContainer} />
           <MapboxGL.Callout title="This is a sample" />
         </MapboxGL.PointAnnotation>,
@@ -124,8 +123,7 @@ class ShowPointAnnotation extends React.Component {
           ref={c => (this._map = c)}
           onPress={this.onPress}
           onDidFinishLoadingMap={this.onDidFinishLoadingMap}
-          style={sheet.matchParent}
-        >
+          style={sheet.matchParent}>
           <MapboxGL.Camera
             zoomLevel={16}
             centerCoordinate={this.state.coordinates[0]}
