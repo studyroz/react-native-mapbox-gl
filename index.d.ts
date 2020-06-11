@@ -158,7 +158,7 @@ declare namespace MapboxGL {
     setGeoJSON: (id: string, json: string) => void
   }
 
-  type Padding = number | [number, number] | [number, number, number, number];
+  export type Padding = number | [number, number] | [number, number, number, number];
   class Camera extends Component<CameraProps> {
     fitBounds(
       northEastCoordinates: GeoJSON.Position,
@@ -309,13 +309,25 @@ export type AttributionPosition =
   | {bottom: number; left: number}
   | {bottom: number; right: number};
 
-export interface RegionPayload {
-  zoomLevel: number;
-  heading: number;
-  animated: boolean;
-  isUserInteraction: number;
-  visibleRegion: GeoJSON.Position[];
-}
+  export interface RegionPayload {
+    zoomLevel: number;
+    heading: number;
+    animated: boolean;
+    pitch: number;
+    isUserInteraction: number;
+    visibleBounds: GeoJSON.Position[];
+  }
+  
+  interface PressProperties {
+    screenPointX: number
+    screenPointY: number
+  }
+  
+  export interface OnPressPayloadInternal {
+    type: string
+    geometry: Geometry
+    properties: PressProperties
+  }
 
 export interface MapViewProps extends ViewProps {
   animated?: boolean;
@@ -738,7 +750,7 @@ export interface HeatmapLayerProps extends LayerBaseProps {
 }
 
 export interface ImagesProps extends ViewProps {
-  images?: {assets?: string[]; [key: string]: ImageSourcePropType};
+  images?: {assets?: string[]};
 }
 
 export interface ImageSourceProps extends ViewProps {

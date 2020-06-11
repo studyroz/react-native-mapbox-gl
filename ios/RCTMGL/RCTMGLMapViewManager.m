@@ -355,7 +355,7 @@ RCT_EXPORT_METHOD(setGeoJSON:(nonnull NSNumber *)reactTag sourceID:(NSString *)s
                 shapeSource.shape = json;
             }
         }
-    }
+    }];
 }    
 
 RCT_EXPORT_METHOD(setSourceVisibility:(nonnull NSNumber *)reactTag
