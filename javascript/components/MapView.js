@@ -502,7 +502,7 @@ class MapView extends NativeBridgeComponent(React.Component) {
   }
 
   async setGeoJSON(sourceID, json) {
-    return await this._runNativeCommand('setGeoJSON', this.nativeRef, [sourceID, json]);
+    return await this._runNativeCommand('setGeoJSON', this._nativeRef, [sourceID, json]);
   }
 
   /**
