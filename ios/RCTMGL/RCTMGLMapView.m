@@ -29,9 +29,11 @@ static double const M2PI = M_PI * 2;
         _pendingInitialLayout = YES;
         _cameraUpdateQueue = [[CameraUpdateQueue alloc] init];
         _sources = [[NSMutableArray alloc] init];
+        _layers = [[NSMutableArray alloc] init];
         _pointAnnotations = [[NSMutableArray alloc] init];
         _reactSubviews = [[NSMutableArray alloc] init];
         _layerWaiters = [[NSMutableDictionary alloc] init];
+        _styleWaiters = [[NSMutableArray alloc] init];
     }
     return self;
 }
@@ -90,6 +92,23 @@ static double const M2PI = M_PI * 2;
     }
 }
 
+- (void)getStyle:(void (^)(MGLStyle* style))onStyleLoaded {
+    if (self.style) {
+        onStyleLoaded(self.style);
+    } else {
+        [_styleWaiters addObject:onStyleLoaded];
+    }
+}
+
+- (void)notifyStyleLoaded {
+    if (!self.style) return;
+    for (StyleLoadedBlock styleLoadedBlock in self.styleWaiters) {
+        styleLoadedBlock(self.style);
+    }
+    [self.styleWaiters removeAllObjects];
+}
+
+
 - (void) addToMap:(id<RCTComponent>)subview
 {
     if ([subview isKindOfClass:[RCTMGLSource class]]) {
@@ -107,6 +126,10 @@ static double const M2PI = M_PI * 2;
     } else if ([subview isKindOfClass:[RCTMGLCamera class]]) {
         RCTMGLCamera *camera = (RCTMGLCamera *)subview;
         camera.map = self;
+    } else if ([subview isKindOfClass:[RCTMGLLayer class]]) {
+        RCTMGLLayer *layer = (RCTMGLLayer*)subview;
+        layer.map = self;
+        [_layers addObject:layer];
     } else {
         NSArray<id<RCTComponent>> *childSubviews = [subview reactSubviews];
 
@@ -129,6 +152,10 @@ static double const M2PI = M_PI * 2;
     } else if ([subview isKindOfClass:[RCTMGLCamera class]]) {
         RCTMGLCamera *camera = (RCTMGLCamera *)subview;
         camera.map = nil;
+    } else if ([subview isKindOfClass:[RCTMGLLayer class]]) {
+        RCTMGLLayer *layer = (RCTMGLLayer*)subview;
+        layer.map = nil;
+        [_layers removeObject:layer];
     } else {
         NSArray<id<RCTComponent>> *childSubViews = [subview reactSubviews];
         
@@ -140,6 +167,27 @@ static double const M2PI = M_PI * 2;
         RCTLogWarn(@"The following layers were waited on but never added to the map: %@", [_layerWaiters allKeys]);
         [_layerWaiters removeAllObjects];
     }
+}
+
+- (void)setSourceVisibility:(BOOL)visible sourceId:(NSString *)sourceId sourceLayerId:(NSString *)sourceLayerId {
+    __weak typeof(self) weakSelf = self;
+    [self getStyle:^(MGLStyle *style) {
+        __strong typeof(self) strongSelf = weakSelf;
+        for (MGLStyleLayer *layer in strongSelf.style.layers) {
+            if ([layer isKindOfClass:[MGLForegroundStyleLayer class]]) {
+                MGLForegroundStyleLayer *foregroundLayer = (MGLForegroundStyleLayer*)layer;
+                if (![foregroundLayer.sourceIdentifier isEqualToString:sourceId]) continue;
+                if (sourceLayerId == nil || sourceLayerId.length == 0) {
+                    layer.visible = visible;
+                } else if ([layer isKindOfClass:[MGLVectorStyleLayer class]]) {
+                    MGLVectorStyleLayer *vectorLayer = (MGLVectorStyleLayer*)layer;
+                    if ([vectorLayer.sourceLayerIdentifier isEqualToString:sourceLayerId]) {
+                        layer.visible = visible;
+                    }
+                }
+            }
+        }
+    }];
 }
 
 #pragma clang diagnostic push
@@ -157,6 +205,7 @@ static double const M2PI = M_PI * 2;
     // underlying mapview action here.
     [self removeFromMap:subview];
     [_reactSubviews removeObject:(UIView *)subview];
+    [(UIView *)subview removeFromSuperview];
 }
 #pragma clang diagnostic pop
 
@@ -198,6 +247,32 @@ static double const M2PI = M_PI * 2;
     
 }
 
+- (void)setReactAttributionPosition:(NSDictionary<NSString *,NSNumber *> *)position
+{
+    NSNumber *left   = [position valueForKey:@"left"];
+    NSNumber *right  = [position valueForKey:@"right"];
+    NSNumber *top    = [position valueForKey:@"top"];
+    NSNumber *bottom = [position valueForKey:@"bottom"];
+    if (left != nil && top != nil) {
+        [self setAttributionButtonPosition:MGLOrnamentPositionTopLeft];
+        [self setAttributionButtonMargins:CGPointMake([left floatValue], [top floatValue])];
+    } else if (right != nil && top != nil) {
+        [self setAttributionButtonPosition:MGLOrnamentPositionTopRight];
+        [self setAttributionButtonMargins:CGPointMake([right floatValue], [top floatValue])];
+    } else if (bottom != nil && right != nil) {
+        [self setAttributionButtonPosition:MGLOrnamentPositionBottomRight];
+        [self setAttributionButtonMargins:CGPointMake([right floatValue], [bottom floatValue])];
+    } else if (bottom != nil && left != nil) {
+        [self setAttributionButtonPosition:MGLOrnamentPositionBottomLeft];
+        [self setAttributionButtonMargins:CGPointMake([left floatValue], [bottom floatValue])];
+    } else {
+        [self setAttributionButtonPosition:MGLOrnamentPositionBottomRight];
+        // same as MGLOrnamentDefaultPositionOffset in MGLMapView.mm
+        [self setAttributionButtonMargins:CGPointMake(8, 8)];
+    }
+    
+}
+
 - (void)setReactLogoEnabled:(BOOL)reactLogoEnabled
 {
     _reactLogoEnabled = reactLogoEnabled;
@@ -208,6 +283,25 @@ static double const M2PI = M_PI * 2;
 {
     _reactCompassEnabled = reactCompassEnabled;
     self.compassView.hidden = !_reactCompassEnabled;
+}
+
+- (void)setReactCompassViewPosition:(NSInteger *)reactCompassViewPosition
+{
+    if(!self.compassView.hidden)
+    {
+        _reactCompassViewPosition = reactCompassViewPosition;
+        self.compassViewPosition = _reactCompassViewPosition;
+    }
+}
+
+- (void)setReactCompassViewMargins:(CGPoint)reactCompassViewMargins
+{
+    if(!self.compassView.hidden)
+    {
+        CGPoint point;
+        point = reactCompassViewMargins;
+        self.compassViewMargins = point;
+    }
 }
 
 - (void)setReactShowUserLocation:(BOOL)reactShowUserLocation

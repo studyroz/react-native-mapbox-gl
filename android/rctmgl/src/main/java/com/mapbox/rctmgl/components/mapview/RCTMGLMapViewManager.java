@@ -1,10 +1,12 @@
 package com.mapbox.rctmgl.components.mapview;
 
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.common.MapBuilder;
 import com.facebook.react.uimanager.LayoutShadowNode;
 import com.facebook.react.uimanager.ThemedReactContext;
@@ -155,6 +157,11 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
         mapView.setReactAttributionEnabled(attributionEnabled);
     }
 
+    @ReactProp(name="attributionPosition")
+    public void setAttributionPosition(RCTMGLMapView mapView, @Nullable ReadableMap attributionPosition) {
+        mapView.setReactAttributionPosition(attributionPosition);
+    }
+
     @ReactProp(name="logoEnabled")
     public void setLogoEnabled(RCTMGLMapView mapView, boolean logoEnabled) {
         mapView.setReactLogoEnabled(logoEnabled);
@@ -163,6 +170,11 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
     @ReactProp(name="compassEnabled")
     public void setCompassEnabled(RCTMGLMapView mapView, boolean compassEnabled) {
         mapView.setReactCompassEnabled(compassEnabled);
+    }
+
+    @ReactProp(name="compassViewMargins")
+    public void setCompassViewMargins(RCTMGLMapView mapView, ReadableMap compassViewMargins){
+        mapView.setReactCompassViewMargins(compassViewMargins);
     }
 
     @ReactProp(name="contentInset")
@@ -206,6 +218,7 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
     public static final int METHOD_SET_GEOJSON = 100;
     public static final int METHOD_SET_HANDLED_MAP_EVENTS = 10;
     public static final int METHOD_SHOW_ATTRIBUTION = 11;
+    public static final int METHOD_SET_SOURCE_VISIBILITY = 12;
 
     @Nullable
     @Override
@@ -222,6 +235,7 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
                 .put("setGeoJSON", METHOD_SET_GEOJSON)
                 .put( "setHandledMapChangedEvents", METHOD_SET_HANDLED_MAP_EVENTS)
                 .put("showAttribution", METHOD_SHOW_ATTRIBUTION)
+                .put("setSourceVisibility", METHOD_SET_SOURCE_VISIBILITY)
                 .build();
     }
 
@@ -281,6 +295,13 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
             case METHOD_SHOW_ATTRIBUTION:
                 mapView.showAttribution();
                 break;
+            case METHOD_SET_SOURCE_VISIBILITY:
+                mapView.setSourceVisibility(
+                        args.getBoolean(1),
+                        args.getString(2),
+                        args.getString(3)
+                );
+
         }
     }
 

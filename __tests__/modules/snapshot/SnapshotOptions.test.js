@@ -25,6 +25,7 @@ describe('SnapshotOptions', () => {
       height: 50.0,
       writeToDisk: false,
       centerCoordinate: JSON.stringify(makePoint(centerCoordinate)),
+      withLogo: true,
     });
   });
 
@@ -37,6 +38,7 @@ describe('SnapshotOptions', () => {
       width: 314,
       height: 600,
       writeToDisk: true,
+      withLogo: true,
       styleURL: NativeModules.MGLModule.StyleURL.Dark,
     };
 
@@ -51,11 +53,15 @@ describe('SnapshotOptions', () => {
 
   it('should create options with bounds', () => {
     const expectedOptions = {
-      bounds: [[1, 2], [3, 4]],
+      bounds: [
+        [1, 2],
+        [3, 4],
+      ],
       width: 400,
       height: 600,
       styleURL: NativeModules.MGLModule.StyleURL.Light,
       writeToDisk: false,
+      withLogo: true,
     };
 
     const geoJSONBounds = JSON.stringify(

@@ -33,24 +33,9 @@ const styles = StyleSheet.create({
 /**
  * MapView backed by Mapbox Native GL
  */
-class MapView extends NativeBridgeComponent {
+class MapView extends NativeBridgeComponent(React.Component) {
   static propTypes = {
     ...viewPropTypes,
-
-    /**
-     * Shows the users location on the map
-     */
-    showUserLocation: PropTypes.bool,
-
-    /**
-     * The mode used to track the user location on the map
-     */
-    userTrackingMode: PropTypes.number,
-
-    /**
-     * The vertical alignment of the user location within in map. This is only enabled while tracking the users location.
-     */
-    userLocationVerticalAlignment: PropTypes.number,
 
     /**
      * The distance from the edges of the map view’s frame to the edges of the map view’s logical viewport.
@@ -121,6 +106,16 @@ class MapView extends NativeBridgeComponent {
     attributionEnabled: PropTypes.bool,
 
     /**
+     * Adds attribution offset, e.g. `{top: 8, left: 8}` will put attribution button in top-left corner of the map
+     */
+    attributionPosition: PropTypes.oneOfType([
+      PropTypes.shape({top: PropTypes.number, left: PropTypes.number}),
+      PropTypes.shape({top: PropTypes.number, right: PropTypes.number}),
+      PropTypes.shape({bottom: PropTypes.number, left: PropTypes.number}),
+      PropTypes.shape({bottom: PropTypes.number, right: PropTypes.number}),
+    ]),
+
+    /**
      * Enable/Disable the logo on the map.
      */
     logoEnabled: PropTypes.bool,
@@ -129,6 +124,16 @@ class MapView extends NativeBridgeComponent {
      * Enable/Disable the compass from appearing on the map
      */
     compassEnabled: PropTypes.bool,
+
+    /**
+     * Position the compass on a corner of the map
+     */
+    compassViewPosition: PropTypes.string,
+
+    /**
+     * Add margins to the compass with x and y values
+     */
+    compassViewMargins: PropTypes.object,
 
     /**
      * [Android only] Enable/Disable use of GLSurfaceView insted of TextureView.
@@ -216,6 +221,11 @@ class MapView extends NativeBridgeComponent {
     onDidFinishRenderingMapFully: PropTypes.func,
 
     /**
+     * This event is triggered when the user location is updated.
+     */
+    onUserLocationUpdate: PropTypes.func,
+
+    /**
      * This event is triggered when a style has finished loading.
      */
     onDidFinishLoadingStyle: PropTypes.func,
@@ -275,8 +285,6 @@ class MapView extends NativeBridgeComponent {
       this._onRegionDidChange.bind(this),
       props.regionDidChangeDebounceTime,
     );
-
-    this._preRefMapMethodQueue = [];
   }
 
   componentDidMount() {
@@ -325,7 +333,11 @@ class MapView extends NativeBridgeComponent {
       if (props.onDidFinishLoadingStyle)
         events.push(MapboxGL.EventTypes.DidFinishLoadingStyle);
 
-      this._runNativeCommand('setHandledMapChangedEvents', events);
+      this._runNativeCommand(
+        'setHandledMapChangedEvents',
+        this._nativeRef,
+        events,
+      );
     }
   }
 
@@ -339,7 +351,11 @@ class MapView extends NativeBridgeComponent {
    * @return {Array}
    */
   async getPointInView(coordinate) {
-    const res = await this._runNativeCommand('getPointInView', [coordinate]);
+    const res = await this._runNativeCommand(
+      'getPointInView',
+      this._nativeRef,
+      [coordinate],
+    );
     return res.pointInView;
   }
 
@@ -353,7 +369,11 @@ class MapView extends NativeBridgeComponent {
    * @return {Array}
    */
   async getCoordinateFromView(point) {
-    const res = await this._runNativeCommand('getCoordinateFromView', [point]);
+    const res = await this._runNativeCommand(
+      'getCoordinateFromView',
+      this._nativeRef,
+      [point],
+    );
     return res.coordinateFromView;
   }
 
@@ -366,7 +386,10 @@ class MapView extends NativeBridgeComponent {
    * @return {Array}
    */
   async getVisibleBounds() {
-    const res = await this._runNativeCommand('getVisibleBounds');
+    const res = await this._runNativeCommand(
+      'getVisibleBounds',
+      this._nativeRef,
+    );
     return res.visibleBounds;
   }
 
@@ -386,11 +409,11 @@ class MapView extends NativeBridgeComponent {
       throw new Error('Must pass in valid coordinate[lng, lat]');
     }
 
-    const res = await this._runNativeCommand('queryRenderedFeaturesAtPoint', [
-      coordinate,
-      getFilter(filter),
-      layerIDs,
-    ]);
+    const res = await this._runNativeCommand(
+      'queryRenderedFeaturesAtPoint',
+      this._nativeRef,
+      [coordinate, getFilter(filter), layerIDs],
+    );
 
     if (isAndroid()) {
       return JSON.parse(res.data);
@@ -417,11 +440,11 @@ class MapView extends NativeBridgeComponent {
         'Must pass in a valid bounding box[top, right, bottom, left]',
       );
     }
-    const res = await this._runNativeCommand('queryRenderedFeaturesInRect', [
-      bbox,
-      getFilter(filter),
-      layerIDs,
-    ]);
+    const res = await this._runNativeCommand(
+      'queryRenderedFeaturesInRect',
+      this._nativeRef,
+      [bbox, getFilter(filter), layerIDs],
+    );
 
     if (isAndroid()) {
       return JSON.parse(res.data);
@@ -433,7 +456,7 @@ class MapView extends NativeBridgeComponent {
   /**
    * Map camera will perform updates based on provided config. Deprecated use Camera#setCamera.
    */
-  setCamera(config = {}) {
+  setCamera() {
     console.warn(
       'MapView.setCamera is deprecated - please use Camera#setCamera',
     );
@@ -445,7 +468,9 @@ class MapView extends NativeBridgeComponent {
    * @return {String}
    */
   async takeSnap(writeToDisk = false) {
-    const res = await this._runNativeCommand('takeSnap', [writeToDisk]);
+    const res = await this._runNativeCommand('takeSnap', this._nativeRef, [
+      writeToDisk,
+    ]);
     return res.uri;
   }
 
@@ -459,7 +484,7 @@ class MapView extends NativeBridgeComponent {
    */
 
   async getZoom() {
-    const res = await this._runNativeCommand('getZoom');
+    const res = await this._runNativeCommand('getZoom', this._nativeRef);
     return res.zoom;
   }
 
@@ -472,12 +497,30 @@ class MapView extends NativeBridgeComponent {
    * @return {Array<Number>} Coordinates
    */
   async getCenter() {
-    const res = await this._runNativeCommand('getCenter');
+    const res = await this._runNativeCommand('getCenter', this._nativeRef);
     return res.center;
   }
 
-  setGeoJSON(sourceID, json) {
-    return this._runNativeCommand('setGeoJSON', [sourceID, json]);
+  async setGeoJSON(sourceID, json) {
+    return await this._runNativeCommand('setGeoJSON', this._nativeRef, [sourceID, json]);
+  }
+
+  /**
+   * Sets the visibility of all the layers referencing the specified `sourceLayerId` and/or `sourceId`
+   *
+   * @example
+   * await this._map.setSourceVisibility(false, 'composite', 'building')
+   *
+   * @param {boolean} visible - Visibility of the layers
+   * @param {String} sourceId - Identifier of the target source (e.g. 'composite')
+   * @param {String=} sourceLayerId - Identifier of the target source-layer (e.g. 'building')
+   */
+  setSourceVisibility(visible, sourceId, sourceLayerId = undefined) {
+    this._runNativeCommand('setSourceVisibility', this._nativeRef, [
+      visible,
+      sourceId,
+      sourceLayerId,
+    ]);
   }
 
   /**
@@ -485,11 +528,7 @@ class MapView extends NativeBridgeComponent {
    * If you implement a custom attribution button, you should add this action to the button.
    */
   showAttribution() {
-    return this._runNativeCommand('showAttribution');
-  }
-
-  _runNativeCommand(methodName, args = []) {
-    return super._runNativeCommand(methodName, this._nativeRef, args);
+    return this._runNativeCommand('showAttribution', this._nativeRef);
   }
 
   _createStopConfig(config = {}) {
@@ -709,7 +748,6 @@ class MapView extends NativeBridgeComponent {
       onLongPress: this._onLongPress,
       onMapChange: this._onChange,
       onAndroidCallback: isAndroid() ? this._onAndroidCallback : undefined,
-      onUserTrackingModeChange: this.props.onUserTrackingModeChange,
     };
 
     let mapView = null;

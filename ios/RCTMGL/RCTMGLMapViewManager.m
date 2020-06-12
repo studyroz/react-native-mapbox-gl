@@ -103,9 +103,14 @@ RCT_REMAP_VIEW_PROPERTY(scrollEnabled, reactScrollEnabled, BOOL)
 RCT_REMAP_VIEW_PROPERTY(pitchEnabled, reactPitchEnabled, BOOL)
 RCT_REMAP_VIEW_PROPERTY(rotateEnabled, reactRotateEnabled, BOOL)
 RCT_REMAP_VIEW_PROPERTY(attributionEnabled, reactAttributionEnabled, BOOL)
+RCT_REMAP_VIEW_PROPERTY(attributionPosition, reactAttributionPosition, NSDictionary)
 RCT_REMAP_VIEW_PROPERTY(logoEnabled, reactLogoEnabled, BOOL)
 RCT_REMAP_VIEW_PROPERTY(compassEnabled, reactCompassEnabled, BOOL)
 RCT_REMAP_VIEW_PROPERTY(zoomEnabled, reactZoomEnabled, BOOL)
+
+RCT_REMAP_VIEW_PROPERTY(compassViewPosition, reactCompassViewPosition, NSInteger *)
+RCT_REMAP_VIEW_PROPERTY(compassViewMargins, reactCompassViewMargins, CGPoint)
+
 
 RCT_REMAP_VIEW_PROPERTY(contentInset, reactContentInset, NSArray)
 RCT_REMAP_VIEW_PROPERTY(styleURL, reactStyleURL, NSString)
@@ -239,7 +244,7 @@ RCT_EXPORT_METHOD(getCenter:(nonnull NSNumber*)reactTag
 
 RCT_EXPORT_METHOD(queryRenderedFeaturesAtPoint:(nonnull NSNumber*)reactTag
                   atPoint:(NSArray<NSNumber*>*)point
-                  withFilter:(NSArray<NSString *> *)filter
+                  withFilter:(NSArray*)filter
                   withLayerIDs:(NSArray<NSString*>*)layerIDs
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
@@ -276,7 +281,7 @@ RCT_EXPORT_METHOD(queryRenderedFeaturesAtPoint:(nonnull NSNumber*)reactTag
 
 RCT_EXPORT_METHOD(queryRenderedFeaturesInRect:(nonnull NSNumber*)reactTag
                   withBBox:(NSArray<NSNumber*>*)bbox
-                  withFilter:(NSArray<NSDictionary<NSString *, id> *> *)filter
+                  withFilter:(NSArray*)filter
                   withLayerIDs:(NSArray<NSString*>*)layerIDs
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
@@ -350,6 +355,27 @@ RCT_EXPORT_METHOD(setGeoJSON:(nonnull NSNumber *)reactTag sourceID:(NSString *)s
                 shapeSource.shape = json;
             }
         }
+    }];
+}    
+
+RCT_EXPORT_METHOD(setSourceVisibility:(nonnull NSNumber *)reactTag
+                  visible:(BOOL)visible
+                  sourceId:(nonnull NSString*)sourceId
+                  sourceLayerId:(nullable NSString*)sourceLayerId
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    [self.bridge.uiManager addUIBlock:^(__unused RCTUIManager *manager, NSDictionary<NSNumber*, UIView*> *viewRegistry) {
+        id view = viewRegistry[reactTag];
+        
+        if (![view isKindOfClass:[RCTMGLMapView class]]) {
+            RCTLogError(@"Invalid react tag, could not find RCTMGLMapView");
+            return;
+        }
+        
+        __weak RCTMGLMapView *reactMapView = (RCTMGLMapView*)view;
+        [reactMapView setSourceVisibility:visible sourceId:sourceId sourceLayerId:sourceLayerId];
+        resolve(nil);
     }];
 }
 
@@ -508,6 +534,12 @@ RCT_EXPORT_METHOD(setGeoJSON:(nonnull NSNumber *)reactTag sourceID:(NSString *)s
     return nil;
 }
 
+- (BOOL)mapView:(MGLMapView *)mapView shouldChangeFromCamera:(MGLMapCamera *)oldCamera toCamera:(MGLMapCamera *)newCamera 
+{
+    RCTMGLMapView* reactMapView = ((RCTMGLMapView *) mapView);
+    return MGLCoordinateBoundsIsEmpty(reactMapView.maxBounds) || MGLCoordinateInCoordinateBounds(newCamera.centerCoordinate, reactMapView.maxBounds);
+}
+
 - (void)mapView:(MGLMapView *)mapView regionWillChangeWithReason:(MGLCameraChangeReason)reason animated:(BOOL)animated
 {
     ((RCTMGLMapView *) mapView).isUserInteraction = (BOOL)(reason & ~MGLCameraChangeReasonProgrammatic);
@@ -522,7 +554,9 @@ RCT_EXPORT_METHOD(setGeoJSON:(nonnull NSNumber *)reactTag sourceID:(NSString *)s
 }
 
 - (void)mapView:(MGLMapView *)mapView regionDidChangeWithReason:(MGLCameraChangeReason)reason animated:(BOOL)animated
-{
+{    
+    if ((reason & MGLCameraChangeReasonTransitionCancelled) == MGLCameraChangeReasonTransitionCancelled) return;
+
     ((RCTMGLMapView *) mapView).isUserInteraction = (BOOL)(reason & ~MGLCameraChangeReasonProgrammatic);
     
     NSDictionary *payload = [self _makeRegionPayload:mapView animated:animated];
@@ -578,17 +612,20 @@ RCT_EXPORT_METHOD(setGeoJSON:(nonnull NSNumber *)reactTag sourceID:(NSString *)s
     RCTMGLMapView *reactMapView = (RCTMGLMapView*)mapView;
     //style.localizesLabels = reactMapView.reactLocalizeLabels;
     
-    if (reactMapView.sources.count > 0) {
-        for (int i = 0; i < reactMapView.sources.count; i++) {
-            RCTMGLSource *source = reactMapView.sources[i];
-            source.map = reactMapView;
-        }
+    for (int i = 0; i < reactMapView.sources.count; i++) {
+        RCTMGLSource *source = reactMapView.sources[i];
+        source.map = reactMapView;
+    }
+    for (int i = 0; i < reactMapView.layers.count; i++) {
+        RCTMGLLayer *layer = reactMapView.layers[i];
+        layer.map = reactMapView;
     }
     
     if (reactMapView.light != nil) {
         reactMapView.light.map = reactMapView;
     }
     
+    [reactMapView notifyStyleLoaded];
     [self reactMapDidChange:reactMapView eventType:RCT_MAPBOX_DID_FINISH_LOADING_STYLE];
 }
 

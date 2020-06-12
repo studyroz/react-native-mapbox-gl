@@ -631,18 +631,53 @@
         "description": "FIX ME NO DESCRIPTION"
       },
       {
+        "name": "maxBounds",
+        "required": false,
+        "type": {
+          "name": "shape",
+          "value": [
+            {
+              "name": "ne",
+              "required": true,
+              "type": {
+                "name": "array",
+                "value": {
+                  "type": "number"
+                }
+              },
+              "default": "none",
+              "description": "northEastCoordinates - North east coordinate of bound"
+            },
+            {
+              "name": "sw",
+              "required": true,
+              "type": {
+                "name": "array",
+                "value": {
+                  "type": "number"
+                }
+              },
+              "default": "none",
+              "description": "southWestCoordinates - South west coordinate of bound"
+            }
+          ]
+        },
+        "default": "none",
+        "description": "Restrict map panning so that the center is within these bounds"
+      },
+      {
         "name": "followUserLocation",
         "required": false,
         "type": "bool",
         "default": "none",
-        "description": "FIX ME NO DESCRIPTION"
+        "description": "Should the map orientation follow the user's."
       },
       {
         "name": "followUserMode",
         "required": false,
         "type": "enum",
         "default": "none",
-        "description": "FIX ME NO DESCRIPTION"
+        "description": "The mode used to track the user location on the map. One of; \"normal\", \"compass\", \"course\". Each mode string is also available as a member on the `MapboxGL.UserTrackingModes` object. `Follow` (normal), `FollowWithHeading` (compass), `FollowWithCourse` (course). NOTE: `followUserLocation` must be set to `true` for any of the modes to take effect. [Example](../example/src/examples/SetUserTrackingModes.js)"
       },
       {
         "name": "followZoomLevel",
@@ -681,6 +716,13 @@
             "type": "number"
           }
         },
+        "default": "none",
+        "description": "FIX ME NO DESCRIPTION"
+      },
+      {
+        "name": "onUserTrackingModeChange",
+        "required": false,
+        "type": "func",
         "default": "none",
         "description": "FIX ME NO DESCRIPTION"
       },
@@ -2488,11 +2530,7 @@
         "name": "setCamera",
         "docblock": "Map camera will perform updates based on provided config. Deprecated use Camera#setCamera.",
         "modifiers": [],
-        "params": [
-          {
-            "name": "config"
-          }
-        ],
+        "params": [],
         "returns": null,
         "description": "Map camera will perform updates based on provided config. Deprecated use Camera#setCamera.",
         "examples": []
@@ -2564,6 +2602,42 @@
         ]
       },
       {
+        "name": "setSourceVisibility",
+        "docblock": "Sets the visibility of all the layers referencing the specified `sourceLayerId` and/or `sourceId`\n\n@example\nawait this._map.setSourceVisibility(false, 'composite', 'building')\n\n@param {boolean} visible - Visibility of the layers\n@param {String} sourceId - Identifier of the target source (e.g. 'composite')\n@param {String=} sourceLayerId - Identifier of the target source-layer (e.g. 'building')",
+        "modifiers": [],
+        "params": [
+          {
+            "name": "visible",
+            "description": "Visibility of the layers",
+            "type": {
+              "name": "boolean"
+            },
+            "optional": false
+          },
+          {
+            "name": "sourceId",
+            "description": "Identifier of the target source (e.g. 'composite')",
+            "type": {
+              "name": "String"
+            },
+            "optional": false
+          },
+          {
+            "name": "sourceLayerId",
+            "description": "Identifier of the target source-layer (e.g. 'building')",
+            "type": {
+              "name": "String"
+            },
+            "optional": true
+          }
+        ],
+        "returns": null,
+        "description": "Sets the visibility of all the layers referencing the specified `sourceLayerId` and/or `sourceId`",
+        "examples": [
+          "\nawait this._map.setSourceVisibility(false, 'composite', 'building')\n\n"
+        ]
+      },
+      {
         "name": "showAttribution",
         "docblock": "Show the attribution and telemetry action sheet.\nIf you implement a custom attribution button, you should add this action to the button.",
         "modifiers": [],
@@ -2574,27 +2648,6 @@
       }
     ],
     "props": [
-      {
-        "name": "showUserLocation",
-        "required": false,
-        "type": "bool",
-        "default": "none",
-        "description": "Shows the users location on the map"
-      },
-      {
-        "name": "userTrackingMode",
-        "required": false,
-        "type": "number",
-        "default": "none",
-        "description": "The mode used to track the user location on the map"
-      },
-      {
-        "name": "userLocationVerticalAlignment",
-        "required": false,
-        "type": "number",
-        "default": "none",
-        "description": "The vertical alignment of the user location within in map. This is only enabled while tracking the users location."
-      },
       {
         "name": "contentInset",
         "required": false,
@@ -2615,6 +2668,13 @@
         "type": "string",
         "default": "MapboxGL.StyleURL.Street",
         "description": "Style URL for map"
+      },
+      {
+        "name": "preferredFramesPerSecond",
+        "required": false,
+        "type": "number",
+        "default": "none",
+        "description": "iOS: The preferred frame rate at which the map view is rendered.\nThe default value for this property is MGLMapViewPreferredFramesPerSecondDefault,\nwhich will adaptively set the preferred frame rate based on the capability of\nthe user’s device to maintain a smooth experience. This property can be set to arbitrary integer values.\n\nAndroid: The maximum frame rate at which the map view is rendered, but it can't excess the ability of device hardware.\nThis property can be set to arbitrary integer values."
       },
       {
         "name": "localizeLabels",
@@ -2659,6 +2719,13 @@
         "description": "The Mapbox terms of service, which governs the use of Mapbox-hosted vector tiles and styles,\n[requires](https://www.mapbox.com/help/how-attribution-works/) these copyright notices to accompany any map that features Mapbox-designed styles, OpenStreetMap data, or other Mapbox data such as satellite or terrain data.\nIf that applies to this map view, do not hide this view or remove any notices from it.\n\nYou are additionally [required](https://www.mapbox.com/help/how-mobile-apps-work/#telemetry) to provide users with the option to disable anonymous usage and location sharing (telemetry).\nIf this view is hidden, you must implement this setting elsewhere in your app. See our website for [Android](https://www.mapbox.com/android-docs/map-sdk/overview/#telemetry-opt-out) and [iOS](https://www.mapbox.com/ios-sdk/#telemetry_opt_out) for implementation details.\n\nEnable/Disable attribution on map. For iOS you need to add MGLMapboxMetricsEnabledSettingShownInApp=YES\nto your Info.plist"
       },
       {
+        "name": "attributionPosition",
+        "required": false,
+        "type": "union",
+        "default": "none",
+        "description": "Adds attribution offset, e.g. `{top: 8, left: 8}` will put attribution button in top-left corner of the map"
+      },
+      {
         "name": "logoEnabled",
         "required": false,
         "type": "bool",
@@ -2671,6 +2738,20 @@
         "type": "bool",
         "default": "none",
         "description": "Enable/Disable the compass from appearing on the map"
+      },
+      {
+        "name": "compassViewPosition",
+        "required": false,
+        "type": "string",
+        "default": "none",
+        "description": "Position the compass on a corner of the map"
+      },
+      {
+        "name": "compassViewMargins",
+        "required": false,
+        "type": "object",
+        "default": "none",
+        "description": "Add margins to the compass with x and y values"
       },
       {
         "name": "surfaceView",
@@ -2808,6 +2889,13 @@
         "description": "This event is triggered when the map fully finished rendering the map."
       },
       {
+        "name": "onUserLocationUpdate",
+        "required": false,
+        "type": "func",
+        "default": "none",
+        "description": "This event is triggered when the user location is updated."
+      },
+      {
         "name": "onDidFinishLoadingStyle",
         "required": false,
         "type": "func",
@@ -2868,6 +2956,13 @@
         "description": "Manually selects/deselects annotation\n@type {[type]}"
       },
       {
+        "name": "draggable",
+        "required": false,
+        "type": "bool",
+        "default": "false",
+        "description": "Enable or disable dragging. Defaults to false."
+      },
+      {
         "name": "coordinate",
         "required": true,
         "type": {
@@ -2917,6 +3012,20 @@
         "type": "func",
         "default": "none",
         "description": "This callback is fired once this annotation is deselected."
+      },
+      {
+        "name": "onDragStart",
+        "required": false,
+        "type": "func",
+        "default": "none",
+        "description": "This callback is fired once this annotation has started being dragged."
+      },
+      {
+        "name": "onDragEnd",
+        "required": false,
+        "type": "func",
+        "default": "none",
+        "description": "This callback is fired once this annotation has stopped being dragged."
       }
     ],
     "composes": [
@@ -3194,6 +3303,18 @@
         "type": "string",
         "default": "none",
         "description": "A URL to a TileJSON configuration file describing the source’s contents and other metadata."
+      },
+      {
+        "name": "tileUrlTemplates",
+        "required": false,
+        "type": {
+          "name": "array",
+          "value": {
+            "type": "string"
+          }
+        },
+        "default": "none",
+        "description": "An array of tile URL templates. If multiple endpoints are specified, clients may use any combination of endpoints.\nExample: https://example.com/raster-tiles/{z}/{x}/{y}.png"
       },
       {
         "name": "minZoomLevel",
@@ -4704,31 +4825,37 @@
     "methods": [
       {
         "name": "setLocationManager",
-        "docblock": null,
-        "modifiers": [],
+        "docblock": "Whether to start or stop the locationManager\nNotice, that locationManager will start automatically when\neither `onUpdate` or `visible` are set\n\n@param {Object} running - Object with key `running` and `boolean` value\n@return {void}",
+        "modifiers": [
+          "async"
+        ],
         "params": [
           {
-            "name": "{running}",
-            "type": null
+            "name": "{running}"
           }
         ],
-        "returns": null
+        "returns": {
+          "description": null,
+          "type": {
+            "name": "void"
+          }
+        },
+        "description": "Whether to start or stop the locationManager\nNotice, that locationManager will start automatically when\neither `onUpdate` or `visible` are set",
+        "examples": []
       },
       {
         "name": "needsLocationManagerRunning",
-        "docblock": null,
+        "docblock": "If locationManager should be running\n\n@return {void}",
         "modifiers": [],
         "params": [],
-        "returns": null
-      },
-      {
-        "name": "userIconLayers",
-        "docblock": null,
-        "modifiers": [
-          "get"
-        ],
-        "params": [],
-        "returns": null
+        "returns": {
+          "description": null,
+          "type": {
+            "name": "void"
+          }
+        },
+        "description": "If locationManager should be running",
+        "examples": []
       }
     ],
     "props": [
@@ -4737,34 +4864,41 @@
         "required": false,
         "type": "bool",
         "default": "true",
-        "description": "FIX ME NO DESCRIPTION"
+        "description": "Whether location icon is animated between updates"
       },
       {
         "name": "renderMode",
         "required": false,
         "type": "enum",
         "default": "'normal'",
-        "description": "FIX ME NO DESCRIPTION"
+        "description": "Rendermode of user location icon.\nOne of `\"normal\"`, `\"custom\"`.\n\"custom\" must be of type mapbox-gl-native components"
       },
       {
         "name": "visible",
         "required": false,
         "type": "bool",
         "default": "true",
-        "description": "FIX ME NO DESCRIPTION"
+        "description": "Whether location icon is visible"
       },
       {
         "name": "onPress",
         "required": false,
         "type": "func",
         "default": "none",
-        "description": "FIX ME NO DESCRIPTION"
+        "description": "Callback that is triggered on location icon press"
       },
       {
         "name": "onUpdate",
         "required": false,
         "type": "func",
         "default": "none",
+        "description": "Callback that is triggered on location update"
+      },
+      {
+        "name": "minDisplacement",
+        "required": false,
+        "type": "number",
+        "default": "0",
         "description": "FIX ME NO DESCRIPTION"
       },
       {
@@ -4772,7 +4906,7 @@
         "required": false,
         "type": "any",
         "default": "none",
-        "description": "FIX ME NO DESCRIPTION"
+        "description": "Custom location icon of type mapbox-gl-native components"
       }
     ],
     "name": "UserLocation"
@@ -4780,7 +4914,43 @@
   "VectorSource": {
     "description": "VectorSource is a map content source that supplies tiled vector data in Mapbox Vector Tile format to be shown on the map.\nThe location of and metadata about the tiles are defined either by an option dictionary or by an external file that conforms to the TileJSON specification.",
     "displayName": "VectorSource",
-    "methods": [],
+    "methods": [
+      {
+        "name": "features",
+        "docblock": "Returns all features that match the query parameters regardless of whether or not the feature is\ncurrently rendered on the map. The domain of the query includes all currently-loaded vector tiles\nand GeoJSON source tiles. This function does not check tiles outside of the visible viewport.\n\n@example\nvectorSource.features(['id1', 'id2'])\n\n@param  {Array=} layerIDs - A set of strings that correspond to the names of layers defined in the current style. Only the features contained in these layers are included in the returned array.\n@param  {Array=} filter - an optional filter statement to filter the returned Features.\n@return {FeatureCollection}",
+        "modifiers": [
+          "async"
+        ],
+        "params": [
+          {
+            "name": "layerIDs",
+            "description": "A set of strings that correspond to the names of layers defined in the current style. Only the features contained in these layers are included in the returned array.",
+            "type": {
+              "name": "Array"
+            },
+            "optional": true
+          },
+          {
+            "name": "filter",
+            "description": "an optional filter statement to filter the returned Features.",
+            "type": {
+              "name": "Array"
+            },
+            "optional": true
+          }
+        ],
+        "returns": {
+          "description": null,
+          "type": {
+            "name": "FeatureCollection"
+          }
+        },
+        "description": "Returns all features that match the query parameters regardless of whether or not the feature is\ncurrently rendered on the map. The domain of the query includes all currently-loaded vector tiles\nand GeoJSON source tiles. This function does not check tiles outside of the visible viewport.",
+        "examples": [
+          "\nvectorSource.features(['id1', 'id2'])\n\n"
+        ]
+      }
+    ],
     "props": [
       {
         "name": "id",
@@ -4795,6 +4965,46 @@
         "type": "string",
         "default": "none",
         "description": "A URL to a TileJSON configuration file describing the source’s contents and other metadata."
+      },
+      {
+        "name": "tileUrlTemplates",
+        "required": false,
+        "type": {
+          "name": "array",
+          "value": {
+            "type": "string"
+          }
+        },
+        "default": "none",
+        "description": "An array of tile URL templates. If multiple endpoints are specified, clients may use any combination of endpoints.\nExample: https://example.com/vector-tiles/{z}/{x}/{y}.pbf"
+      },
+      {
+        "name": "minZoomLevel",
+        "required": false,
+        "type": "number",
+        "default": "none",
+        "description": "An unsigned integer that specifies the minimum zoom level at which to display tiles from the source.\nThe value should be between 0 and 22, inclusive, and less than\nmaxZoomLevel, if specified. The default value for this option is 0."
+      },
+      {
+        "name": "maxZoomLevel",
+        "required": false,
+        "type": "number",
+        "default": "none",
+        "description": "An unsigned integer that specifies the maximum zoom level at which to display tiles from the source.\nThe value should be between 0 and 22, inclusive, and less than\nminZoomLevel, if specified. The default value for this option is 22."
+      },
+      {
+        "name": "tms",
+        "required": false,
+        "type": "bool",
+        "default": "none",
+        "description": "Influences the y direction of the tile coordinates. (tms inverts y axis)"
+      },
+      {
+        "name": "attribution",
+        "required": false,
+        "type": "string",
+        "default": "none",
+        "description": "An HTML or literal text string defining the buttons to be displayed in an action sheet when the\nsource is part of a map view’s style and the map view’s attribution button is pressed."
       },
       {
         "name": "onPress",
@@ -4904,6 +5114,20 @@
         "description": "FIX ME NO DESCRIPTION"
       },
       {
+        "name": "children",
+        "required": false,
+        "type": "any",
+        "default": "none",
+        "description": "FIX ME NO DESCRIPTION"
+      },
+      {
+        "name": "style",
+        "required": false,
+        "type": "any",
+        "default": "none",
+        "description": "FIX ME NO DESCRIPTION"
+      },
+      {
         "name": "icon",
         "required": false,
         "type": "union",
@@ -4982,6 +5206,20 @@
         }
       },
       {
+        "name": "resetDatabase",
+        "description": "Deletes the existing database, which includes both the ambient cache and offline packs, then reinitializes it.",
+        "params": [],
+        "examples": [
+          "await MapboxGL.offlineManager.resetDatabase();"
+        ],
+        "returns": {
+          "description": "",
+          "type": {
+            "name": "void"
+          }
+        }
+      },
+      {
         "name": "getPacks",
         "description": "Retrieves all the current offline packs that are stored in the database.",
         "params": [],
@@ -5015,6 +5253,29 @@
           "description": "",
           "type": {
             "name": "OfflinePack"
+          }
+        }
+      },
+      {
+        "name": "mergeOfflineRegions",
+        "description": "Sideloads offline db",
+        "params": [
+          {
+            "name": "path",
+            "description": "Path to offline tile db on file system.",
+            "type": {
+              "name": "String"
+            },
+            "optional": false
+          }
+        ],
+        "examples": [
+          "await MapboxGL.offlineManager.mergeOfflineRegions(path);"
+        ],
+        "returns": {
+          "description": "",
+          "type": {
+            "name": "void"
           }
         }
       },
@@ -5148,7 +5409,7 @@
           }
         ],
         "examples": [
-          "// creates a temp file png of base map\nconst uri = await MapboxGL.snapshotManager.takeSnap({\n  centerCoordinate: [-74.126410, 40.797968],\n  width: width,\n  height: height,\n  zoomLevel: 12,\n  pitch: 30,\n  heading: 20,\n  styleURL: MapboxGL.StyleURL.Dark,\n  writeToDisk: true, // creates a temp file\n});\n\n// creates base64 png of base map\nconst uri = await MapboxGL.snapshotManager.takeSnap({\n  centerCoordinate: [-74.126410, 40.797968],\n  width: width,\n  height: height,\n  zoomLevel: 12,\n  pitch: 30,\n  heading: 20,\n  styleURL: MapboxGL.StyleURL.Dark,\n});\n\n// creates snapshot with bounds\nconst uri = await MapboxGL.snapshotManager.takeSnap({\n  bounds: [[-74.126410, 40.797968], [-74.143727, 40.772177]],\n  width: width,\n  height: height,\n  styleURL: MapboxGL.StyleURL.Dark,\n});"
+          "// creates a temp file png of base map\nconst uri = await MapboxGL.snapshotManager.takeSnap({\n  centerCoordinate: [-74.126410, 40.797968],\n  width: width,\n  height: height,\n  zoomLevel: 12,\n  pitch: 30,\n  heading: 20,\n  styleURL: MapboxGL.StyleURL.Dark,\n  writeToDisk: true, // Create a temporary file\n});\n\n// creates base64 png of base map without logo\nconst uri = await MapboxGL.snapshotManager.takeSnap({\n  centerCoordinate: [-74.126410, 40.797968],\n  width: width,\n  height: height,\n  zoomLevel: 12,\n  pitch: 30,\n  heading: 20,\n  styleURL: MapboxGL.StyleURL.Dark,\n  withLogo: false, // Disable Mapbox logo (Android only)\n});\n\n// creates snapshot with bounds\nconst uri = await MapboxGL.snapshotManager.takeSnap({\n  bounds: [[-74.126410, 40.797968], [-74.143727, 40.772177]],\n  width: width,\n  height: height,\n  styleURL: MapboxGL.StyleURL.Dark,\n});"
         ],
         "returns": {
           "description": "",
