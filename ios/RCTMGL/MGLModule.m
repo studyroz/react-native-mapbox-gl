@@ -266,7 +266,7 @@ RCT_EXPORT_METHOD(getAccessToken:(RCTPromiseResolveBlock)resolve rejecter:(RCTPr
 
 RCT_EXPORT_METHOD(setApiBaseUrl:(NSString *)url)
 {
-    Class networkConfiguration = NSClassFromString(@"MGLNetworkConfiguration");
+    Class networkConfiguration = NSClassFromString(@"MGLAccountManager");
     if (networkConfiguration && [networkConfiguration respondsToSelector:@selector(setAPIBaseURL:)]) {
         [networkConfiguration
          performSelectorOnMainThread:@selector(setAPIBaseURL:)
