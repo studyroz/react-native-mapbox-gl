@@ -95,7 +95,7 @@ public class CameraStop {
 
             // Adding map padding to the camera padding which is the same behavior as
             // mapbox native does on iOS
-            int[] mapPadding = null;
+            double[] mapPadding = null;
             if (map.getCameraPosition() != null) {
                 mapPadding = map.getCameraPosition().padding;
             }
@@ -104,10 +104,10 @@ public class CameraStop {
             int paddingRight;
             int paddingBottom;
             if (mapPadding != null) {
-                paddingLeft = mapPadding[0] + mBoundsPaddingLeft;
-                paddingTop = mapPadding[1] + mBoundsPaddingTop;
-                paddingRight = mapPadding[2] + mBoundsPaddingRight;
-                paddingBottom = mapPadding[3] + mBoundsPaddingBottom;
+                paddingLeft = (int) mapPadding[0] + mBoundsPaddingLeft;
+                paddingTop = (int) mapPadding[1] + mBoundsPaddingTop;
+                paddingRight = (int) mapPadding[2] + mBoundsPaddingRight;
+                paddingBottom = (int) mapPadding[3] + mBoundsPaddingBottom;
             } else {
                 paddingLeft = mBoundsPaddingLeft;
                 paddingTop = mBoundsPaddingTop;
