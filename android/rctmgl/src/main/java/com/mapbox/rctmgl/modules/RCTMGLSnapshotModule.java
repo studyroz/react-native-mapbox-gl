@@ -108,6 +108,7 @@ public class RCTMGLSnapshotModule extends ReactContextBaseJavaModule {
         options.withLogo(jsOptions.getBoolean("withLogo"));
         options.withStyle(jsOptions.getString("styleURL"));
         options.withPixelRatio(Float.valueOf(mContext.getResources().getDisplayMetrics().scaledDensity).intValue());
+        options.withStyleJson(jsOptions.getString("styleJson"));
 
         if (jsOptions.hasKey("bounds")) {
             FeatureCollection bounds = FeatureCollection.fromJson(jsOptions.getString("bounds"));

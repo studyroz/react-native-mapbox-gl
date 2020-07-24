@@ -13,6 +13,7 @@ class SnapshotOptions {
       );
     }
 
+    this.styleJson = options.styleJson;
     this.styleURL = options.styleURL || MapboxGL.StyleURL.Street;
     this.heading = options.heading || 0.0;
     this.pitch = options.pitch || 0.0;
@@ -35,6 +36,7 @@ class SnapshotOptions {
 
   toJSON() {
     return {
+      styleJson: this.styleJson,
       styleURL: this.styleURL,
       heading: this.heading,
       pitch: this.pitch,

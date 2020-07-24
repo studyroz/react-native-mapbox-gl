@@ -775,6 +775,7 @@ export interface OfflineCreatePackOptions {
 
 export interface SnapshotOptions {
   centerCoordinate?: GeoJSON.Position;
+  bounds?: GeoJSON.Position[];
   width?: number;
   height?: number;
   zoomLevel?: number;
@@ -782,6 +783,8 @@ export interface SnapshotOptions {
   heading?: number;
   styleURL?: MapboxGL.StyleURL;
   writeToDisk?: boolean;
+  withLogo?: boolean;
+  styleJson?: string
 }
 
 export interface OnDragPayloadInternal {
