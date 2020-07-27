@@ -258,7 +258,7 @@ declare namespace MapboxGL {
   }
 
   class SnapshotManager {
-    static takeSnap(options: SnapshotOptions): Promise<string>;
+    takeSnap(options: SnapshotOptions): Promise<TakeSnapPromise>;
   }
 
   interface OfflinePack {
@@ -785,6 +785,14 @@ export interface SnapshotOptions {
   writeToDisk?: boolean;
   withLogo?: boolean;
   styleJson?: string
+}
+
+export interface TakeSnapPromise {
+  imageResult: string
+  southwestLongitude: number
+  southwestLatitude: number
+  northeastLongitude: number
+  northeastLatitude: number
 }
 
 export interface OnDragPayloadInternal {
