@@ -42,7 +42,19 @@ RCT_EXPORT_METHOD(takeSnap:(NSDictionary *)jsOptions
                 result = [RNMBImageUtils createBase64:snapshot.image];
             }
             
-            resolve(result);
+            NSNumber *width = jsOptions[@"width"];
+            NSNumber *height = jsOptions[@"height"];
+            CLLocationCoordinate2D northeastLatLng = [snapshot coordinateForPoint:CGPointMake(width.floatValue, 0)];
+            CLLocationCoordinate2D southwestLatLng = [snapshot coordinateForPoint:CGPointMake(0, height.floatValue)];
+            
+            NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+            [dic setValue:result forKey:@"imageResult"];
+            [dic setValue:@(southwestLatLng.longitude) forKey:@"southwestLongitude"];
+            [dic setValue:@(southwestLatLng.latitude) forKey:@"southwestLatitude"];
+            [dic setValue:@(northeastLatLng.longitude) forKey:@"northeastLongitude"];
+            [dic setValue:@(northeastLatLng.latitude) forKey:@"northeastLatitude"];
+            
+            resolve(dic);
             snapshotter = nil;
         }];
     });
