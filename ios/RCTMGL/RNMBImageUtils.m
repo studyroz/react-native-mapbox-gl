@@ -14,7 +14,7 @@
 {
     NSString *fileID = [[NSUUID UUID] UUIDString];
     NSString *pathComponent = [NSString stringWithFormat:@"Documents/rctmgl-snapshot-%@.%@", fileID, @"png"];
-    NSString *filePath = [NSHomeDirectory() stringByAppendingPathComponent: pathComponent];
+    NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent: pathComponent];
     
     NSData *data = UIImagePNGRepresentation(image);
     [data writeToFile:filePath atomically:YES];
