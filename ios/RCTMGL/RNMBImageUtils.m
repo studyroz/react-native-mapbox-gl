@@ -13,7 +13,7 @@
 + (NSString *)createTempFile:(UIImage *)image
 {
     NSString *fileID = [[NSUUID UUID] UUIDString];
-    NSString *pathComponent = [NSString stringWithFormat:@"Documents/rctmgl-snapshot-%@.%@", fileID, @"png"];
+    NSString *pathComponent = [NSString stringWithFormat:@"rctmgl-snapshot-%@.%@", fileID, @"png"];
     NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent: pathComponent];
     
     NSData *data = UIImagePNGRepresentation(image);
