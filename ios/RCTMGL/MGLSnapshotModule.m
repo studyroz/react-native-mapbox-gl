@@ -75,9 +75,14 @@ RCT_EXPORT_METHOD(takeSnap:(NSDictionary *)jsOptions
     NSNumber *height = jsOptions[@"height"];
     CGSize size = CGSizeMake([width doubleValue], [height doubleValue]);
     
-    MGLMapSnapshotOptions *options = [[MGLMapSnapshotOptions alloc] initWithStyleURL:[NSURL URLWithString:jsOptions[@"styleURL"]]
+    NSURL *styleURL = [[NSURL fileURLWithPath: NSTemporaryDirectory()] URLByAppendingPathComponent:@"styleJson.json"];
+    if ([jsOptions[@"styleJson"] isKindOfClass:[NSString class]]) {
+        [jsOptions[@"styleJson"] writeToURL:styleURL atomically:true encoding:NSUTF8StringEncoding error:nil];
+    }
+    MGLMapSnapshotOptions *options = [[MGLMapSnapshotOptions alloc] initWithStyleURL:styleURL
                                                                    camera:camera
                                                                    size:size];
+
     if (jsOptions[@"zoomLevel"] != nil) {
         options.zoomLevel = [jsOptions[@"zoomLevel"] doubleValue];
     }
