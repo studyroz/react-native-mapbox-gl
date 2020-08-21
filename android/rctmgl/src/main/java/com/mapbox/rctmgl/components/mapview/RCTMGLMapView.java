@@ -932,7 +932,7 @@ public class RCTMGLMapView extends MapView implements
             @Override
             public void onSnapshotReady(Bitmap snapshot) {
                 WritableMap payload = new WritableNativeMap();
-                String uri = writeToDisk ? BitmapUtils.createTempFile(mContext, snapshot)
+                String uri = writeToDisk ? BitmapUtils.createTempFile(mContext, snapshot, "video_data")
                         : BitmapUtils.createBase64(snapshot);
                 payload.putString("uri", uri);
 

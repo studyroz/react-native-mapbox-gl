@@ -82,7 +82,7 @@ public class RCTMGLSnapshotModule extends ReactContextBaseJavaModule {
 
                         String result;
                         if (jsOptions.getBoolean("writeToDisk")) {
-                            result = BitmapUtils.createTempFile(mContext, bitmap);
+                            result = BitmapUtils.createTempFile(mContext, bitmap, "video_data");
                         } else {
                             result = BitmapUtils.createBase64(bitmap);
                         }
