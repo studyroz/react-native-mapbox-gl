@@ -74,12 +74,24 @@ public class BitmapUtils {
         return BitmapFactory.decodeResource(resources, resID, options);
     }
 
-    public static String createTempFile(Context context, Bitmap bitmap) {
+    public static String createTempFile(Context context, Bitmap bitmap, String childDir) {
         File tempFile = null;
         FileOutputStream outputStream = null;
 
         try {
-            tempFile = File.createTempFile(LOG_TAG, ".png", context.getCacheDir());
+            File cacheDir = context.getCacheDir();
+            File fileDir = cacheDir;
+            if (childDir != null) {
+                String filePath = cacheDir + "/" + childDir;
+                fileDir = new File(filePath);
+                fileDir.mkdir();
+
+                if (!fileDir.exists()) {
+                    return null;
+                }
+            }
+
+            tempFile = File.createTempFile(LOG_TAG, ".png", fileDir);
             outputStream = new FileOutputStream(tempFile);
         } catch (IOException e) {
             Log.w(LOG_TAG, e.getLocalizedMessage());

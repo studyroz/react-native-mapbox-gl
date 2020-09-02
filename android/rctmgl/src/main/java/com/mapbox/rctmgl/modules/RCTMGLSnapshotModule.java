@@ -3,6 +3,7 @@ package com.mapbox.rctmgl.modules;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.PointF;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Handler;
@@ -10,16 +11,19 @@ import android.os.Looper;
 import android.util.Base64;
 import android.util.Log;
 
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.module.annotations.ReactModule;
 import com.mapbox.geojson.Feature;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
+import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.snapshotter.MapSnapshot;
 import com.mapbox.mapboxsdk.snapshotter.MapSnapshotter;
 import com.mapbox.mapboxsdk.storage.FileSource;
@@ -73,10 +77,12 @@ public class RCTMGLSnapshotModule extends ReactContextBaseJavaModule {
                     @Override
                     public void onSnapshotReady(MapSnapshot snapshot) {
                         Bitmap bitmap = snapshot.getBitmap();
+                        LatLng northeastLatLng = snapshot.latLngForPixel(new PointF((int) jsOptions.getDouble("width"), 0));
+                        LatLng southwestLatLng = snapshot.latLngForPixel(new PointF(0, (int) jsOptions.getDouble("height")));
 
-                        String result = null;
+                        String result;
                         if (jsOptions.getBoolean("writeToDisk")) {
-                            result = BitmapUtils.createTempFile(mContext, bitmap);
+                            result = BitmapUtils.createTempFile(mContext, bitmap, "video_data");
                         } else {
                             result = BitmapUtils.createBase64(bitmap);
                         }
@@ -86,7 +92,13 @@ public class RCTMGLSnapshotModule extends ReactContextBaseJavaModule {
                             return;
                         }
 
-                        promise.resolve(result);
+                        WritableMap map = Arguments.createMap();
+                        map.putString("imageResult", result);
+                        map.putDouble("southwestLongitude", southwestLatLng.getLongitude());
+                        map.putDouble("southwestLatitude", southwestLatLng.getLatitude());
+                        map.putDouble("northeastLongitude", northeastLatLng.getLongitude());
+                        map.putDouble("northeastLatitude", northeastLatLng.getLatitude());
+                        promise.resolve(map);
                         mSnapshotterMap.remove(snapshotterID);
                     }
                 }, new MapSnapshotter.ErrorHandler() {
@@ -108,6 +120,7 @@ public class RCTMGLSnapshotModule extends ReactContextBaseJavaModule {
         options.withLogo(jsOptions.getBoolean("withLogo"));
         options.withStyle(jsOptions.getString("styleURL"));
         options.withPixelRatio(Float.valueOf(mContext.getResources().getDisplayMetrics().scaledDensity).intValue());
+        options.withStyleJson(jsOptions.getString("styleJson"));
 
         if (jsOptions.hasKey("bounds")) {
             FeatureCollection bounds = FeatureCollection.fromJson(jsOptions.getString("bounds"));
