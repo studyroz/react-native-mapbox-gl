@@ -104,6 +104,7 @@ public class RCTMGLSnapshotModule extends ReactContextBaseJavaModule {
                 }, new MapSnapshotter.ErrorHandler() {
                     @Override
                     public void onError(String error) {
+                        promise.reject(REACT_CLASS, "MapSnapshotter error");
                         Log.w(REACT_CLASS, error);
                         mSnapshotterMap.remove(snapshotterID);
                     }
