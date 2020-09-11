@@ -159,18 +159,13 @@ declare namespace MapboxGL {
   }
 
   export type Padding = number | [number, number] | [number, number, number, number];
-  export enum AnimationMode {
-    FLY_TO = "flyTo",
-    EASE_TO = "easeTo",
-    MOVE_TO = "moveTo",
-  }
   class Camera extends Component<CameraProps> {
     fitBounds(
       northEastCoordinates: GeoJSON.Position,
       southWestCoordinates: GeoJSON.Position,
       padding?: Padding,
       duration?: number,
-      animationMode?: AnimationMode
+      animationMode?: 'flyTo' | 'easeTo' | 'moveTo',
     ): void;
     flyTo(coordinates: GeoJSON.Position, duration?: number): void;
     moveTo(coordinates: GeoJSON.Position, duration?: number): void;
