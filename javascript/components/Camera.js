@@ -276,6 +276,7 @@ class Camera extends React.Component {
     southWestCoordinates,
     padding = 0,
     animationDuration = 0.0,
+    animationMode = Camera.Mode.Ease
   ) {
     const pad = {
       paddingLeft: 0,
@@ -310,7 +311,7 @@ class Camera extends React.Component {
         ...pad,
       },
       animationDuration,
-      animationMode: Camera.Mode.Ease,
+      animationMode,
     });
   }
 
