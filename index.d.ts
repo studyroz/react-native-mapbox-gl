@@ -165,6 +165,7 @@ declare namespace MapboxGL {
       southWestCoordinates: GeoJSON.Position,
       padding?: Padding,
       duration?: number,
+      animationMode?: 'flyTo' | 'easeTo' | 'moveTo',
     ): void;
     flyTo(coordinates: GeoJSON.Position, duration?: number): void;
     moveTo(coordinates: GeoJSON.Position, duration?: number): void;
