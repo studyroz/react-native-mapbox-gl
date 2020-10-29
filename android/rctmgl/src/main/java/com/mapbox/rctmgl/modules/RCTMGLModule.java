@@ -11,6 +11,7 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.common.MapBuilder;
 import com.facebook.react.module.annotations.ReactModule;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.mapbox.mapboxsdk.maps.TelemetryDefinition;
 import com.mapbox.mapboxsdk.Mapbox;
 // import com.mapbox.mapboxsdk.constants.Style;
@@ -25,10 +26,15 @@ import com.mapbox.rctmgl.location.UserTrackingMode;
 import com.mapbox.mapboxsdk.maps.Style;
 
 import okhttp3.Dispatcher;
+import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
+import okhttp3.Response;
 
 import com.mapbox.mapboxsdk.module.http.HttpRequestUtil;
 
+import org.jetbrains.annotations.NotNull;
+
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,6 +47,7 @@ import javax.annotation.Nullable;
 @ReactModule(name = RCTMGLModule.REACT_CLASS)
 public class RCTMGLModule extends ReactContextBaseJavaModule {
     public static final String REACT_CLASS = "RCTMGLModule";
+    public static final String MAP_NET_REQUEST_FAIL_EVENT = "map_net_request_fail";
 
     private static boolean customHeaderInterceptorAdded = false;
 
@@ -313,7 +320,6 @@ public class RCTMGLModule extends ReactContextBaseJavaModule {
             @Override
             public void run() {
                 if (!customHeaderInterceptorAdded) {
-                    Log.i("header", "Add interceptor");
                     OkHttpClient httpClient = new OkHttpClient.Builder()
                             .addInterceptor(CustomHeadersInterceptor.INSTANCE).dispatcher(getDispatcher()).build();
                     HttpRequestUtil.setOkHttpClient(httpClient);
@@ -321,6 +327,45 @@ public class RCTMGLModule extends ReactContextBaseJavaModule {
                 }
 
                 CustomHeadersInterceptor.INSTANCE.addHeader(headerName, headerValue);
+            }
+        });
+    }
+
+    @ReactMethod
+    public void useCustomNetInterceptor() {
+        mReactContext.runOnUiQueueThread(new Runnable() {
+            @Override
+            public void run() {
+                OkHttpClient httpClient = new OkHttpClient.Builder()
+                        .addInterceptor(new Interceptor() {
+                            @NotNull
+                            @Override
+                            public Response intercept(@NotNull Chain chain) throws IOException {
+                                Response response;
+                                String errorDomain = "unknown";
+                                String requestUrl = chain.request().url().toString();
+                                if (requestUrl.contains("mapbox")) {
+                                    errorDomain = "mapbox";
+                                } else if (requestUrl.contains("google")) {
+                                    errorDomain = "google";
+                                }
+                                try {
+                                    response = chain.proceed(chain.request());
+                                } catch (IOException e) {
+                                    // Canceled不影响瓦片拉取
+                                    if (!"Canceled".equals(e.getMessage())) {
+                                        emitNetRequestFailEventToJS( errorDomain + " exception: " + e.getMessage());
+                                    }
+                                    throw e;
+                                }
+                                // 304缓存导致，不视为失败
+                                if (!response.isSuccessful() && response.code() != 304) {
+                                    emitNetRequestFailEventToJS(errorDomain + " code: " + response.code());
+                                }
+                                return response;
+                            }
+                        }).dispatcher(getDispatcher()).build();
+                HttpRequestUtil.setOkHttpClient(httpClient);
             }
         });
     }
@@ -364,5 +409,10 @@ public class RCTMGLModule extends ReactContextBaseJavaModule {
         // https://github.com/mapbox/mapbox-gl-native/blob/master/platform/android/src/http_file_source.cpp#L192
         dispatcher.setMaxRequestsPerHost(20);
         return dispatcher;
+    }
+
+    private void emitNetRequestFailEventToJS(String errorMSg) {
+        mReactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit(RCTMGLModule.MAP_NET_REQUEST_FAIL_EVENT, errorMSg);
     }
 }
