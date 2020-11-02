@@ -104,7 +104,8 @@ declare namespace MapboxGL {
   function setTelemetryEnabled(telemetryEnabled: boolean): void;
   function setConnected(connected: boolean): void;
   function requestAndroidLocationPermissions(): Promise<boolean>;
-  function setApiBaseUrl(url: string | undefined): void
+  function setApiBaseUrl(url: string | undefined): void;
+  function useCustomNetInterceptor(): void;
 
   const offlineManager: OfflineManager;
   const snapshotManager: SnapshotManager;
