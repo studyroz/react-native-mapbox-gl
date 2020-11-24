@@ -352,14 +352,15 @@ public class RCTMGLModule extends ReactContextBaseJavaModule {
                                 try {
                                     response = chain.proceed(chain.request());
                                 } catch (IOException e) {
-                                    // Canceled不影响瓦片拉取
-                                    if (!"Canceled".equals(e.getMessage())) {
-                                        emitNetRequestFailEventToJS( errorDomain + " exception: " + e.getMessage());
+                                    // Canceled / Socket closed / Socket is closed / timeout， 不影响地图正常工作
+                                    String exceptionMsg = e.getMessage();
+                                    if (!"Canceled".equals(exceptionMsg) && !"Socket closed".equals(exceptionMsg) && !"Socket is closed".equals(exceptionMsg) && !"timeout".equals(exceptionMsg)) {
+                                        emitNetRequestFailEventToJS(errorDomain + " exception: " + e.getMessage());
                                     }
                                     throw e;
                                 }
-                                // 304缓存导致，不视为失败
-                                if (!response.isSuccessful() && response.code() != 304) {
+                                // 304缓存导致，404资源找不到，不影响地图正常工作
+                                if (!response.isSuccessful() && response.code() != 304 && response.code() != 404) {
                                     emitNetRequestFailEventToJS(errorDomain + " code: " + response.code());
                                 }
                                 return response;
