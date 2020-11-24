@@ -32,6 +32,7 @@ import com.mapbox.mapboxsdk.camera.CameraUpdate;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.geometry.LatLngBounds;
 import com.mapbox.mapboxsdk.geometry.VisibleRegion;
+import com.mapbox.mapboxsdk.log.Logger;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.MapboxMapOptions;
@@ -1123,10 +1124,13 @@ public class RCTMGLMapView extends MapView implements
 
     private WritableMap makeRegionPayload(Boolean isAnimated) {
         CameraPosition position = mMap.getCameraPosition();
+        if(position == null || position.target == null) {
+            return new WritableNativeMap();
+        }
         LatLng latLng = new LatLng(position.target.getLatitude(), position.target.getLongitude());
 
         WritableMap properties = new WritableNativeMap();
-        
+
         properties.putDouble("zoomLevel", position.zoom);
         properties.putDouble("heading", position.bearing);
         properties.putDouble("pitch", position.tilt);
@@ -1137,8 +1141,8 @@ public class RCTMGLMapView extends MapView implements
         try {
             VisibleRegion visibleRegion = mMap.getProjection().getVisibleRegion();
             properties.putArray("visibleBounds", GeoJSONUtils.fromLatLngBounds(visibleRegion.latLngBounds));
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception ex) {
+            Logger.e(LOG_TAG, String.format("An error occurred while attempting to make the region: %s", ex.getMessage()));
         }
 
         return GeoJSONUtils.toPointFeature(latLng, properties);
