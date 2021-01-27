@@ -48,6 +48,7 @@ import javax.annotation.Nullable;
 public class RCTMGLModule extends ReactContextBaseJavaModule {
     public static final String REACT_CLASS = "RCTMGLModule";
     public static final String MAP_NET_REQUEST_FAIL_EVENT = "map_net_request_fail";
+    public static final String MAP_NET_REQUEST_EVENT = "map_net_request";
 
     private static boolean customHeaderInterceptorAdded = false;
 
@@ -342,26 +343,30 @@ public class RCTMGLModule extends ReactContextBaseJavaModule {
                             @Override
                             public Response intercept(@NotNull Chain chain) throws IOException {
                                 Response response;
-                                String errorDomain = "unknown";
+                                // type 1: mapbox, 2: google, 3: 天地图
+                                int domainType = -1;
                                 String requestUrl = chain.request().url().toString();
                                 if (requestUrl.contains("mapbox")) {
-                                    errorDomain = "mapbox";
+                                    domainType = 1;
                                 } else if (requestUrl.contains("google")) {
-                                    errorDomain = "google";
+                                    domainType = 2;
+                                } else if (requestUrl.contains("tianditu")) {
+                                    domainType = 3;
                                 }
                                 try {
+                                    emitNetRequestEventToJS(domainType);
                                     response = chain.proceed(chain.request());
                                 } catch (IOException e) {
-                                    // Canceled / Socket closed / Socket is closed / timeout， 不影响地图正常工作
+                                    // Canceled / Socket closed / Socket is closed / timeout，不影响地图正常工作
                                     String exceptionMsg = e.getMessage();
                                     if (!"Canceled".equals(exceptionMsg) && !"Socket closed".equals(exceptionMsg) && !"Socket is closed".equals(exceptionMsg) && !"timeout".equals(exceptionMsg)) {
-                                        emitNetRequestFailEventToJS(errorDomain + " exception: " + e.getMessage());
+                                        emitNetRequestFailEventToJS(domainType, "exception: " + e.getMessage());
                                     }
                                     throw e;
                                 }
                                 // 304缓存导致，404资源找不到，不影响地图正常工作
                                 if (!response.isSuccessful() && response.code() != 304 && response.code() != 404) {
-                                    emitNetRequestFailEventToJS(errorDomain + " code: " + response.code());
+                                    emitNetRequestFailEventToJS(domainType, "code: " + response.code());
                                 }
                                 return response;
                             }
@@ -376,7 +381,7 @@ public class RCTMGLModule extends ReactContextBaseJavaModule {
         apiBaseUrl = url;
     }
 
-        @ReactMethod
+    @ReactMethod
     public void getAccessToken(Promise promise) {
         WritableMap map = Arguments.createMap();
         map.putString("accessToken", Mapbox.getAccessToken());
@@ -412,8 +417,18 @@ public class RCTMGLModule extends ReactContextBaseJavaModule {
         return dispatcher;
     }
 
-    private void emitNetRequestFailEventToJS(String errorMSg) {
+    // type 1: mapbox, 2: google, 3: 天地图
+    private void emitNetRequestEventToJS(int type) {
         mReactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                .emit(RCTMGLModule.MAP_NET_REQUEST_FAIL_EVENT, errorMSg);
+                .emit(RCTMGLModule.MAP_NET_REQUEST_EVENT, type);
+    }
+
+    // type 1: mapbox, 2: google, 3: 天地图
+    private void emitNetRequestFailEventToJS(int type, String errorMSg) {
+        WritableMap args = Arguments.createMap();
+        args.putInt("type", type);
+        args.putString("errorMSg", errorMSg);
+        mReactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit(RCTMGLModule.MAP_NET_REQUEST_FAIL_EVENT, args);
     }
 }
