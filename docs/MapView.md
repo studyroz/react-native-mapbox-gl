@@ -16,9 +16,10 @@
 | rotateEnabled | `bool` | `true` | `false` | Enable/Disable rotation on map |
 | attributionEnabled | `bool` | `true` | `false` | The Mapbox terms of service, which governs the use of Mapbox-hosted vector tiles and styles,<br/>[requires](https://www.mapbox.com/help/how-attribution-works/) these copyright notices to accompany any map that features Mapbox-designed styles, OpenStreetMap data, or other Mapbox data such as satellite or terrain data.<br/>If that applies to this map view, do not hide this view or remove any notices from it.<br/><br/>You are additionally [required](https://www.mapbox.com/help/how-mobile-apps-work/#telemetry) to provide users with the option to disable anonymous usage and location sharing (telemetry).<br/>If this view is hidden, you must implement this setting elsewhere in your app. See our website for [Android](https://www.mapbox.com/android-docs/map-sdk/overview/#telemetry-opt-out) and [iOS](https://www.mapbox.com/ios-sdk/#telemetry_opt_out) for implementation details.<br/><br/>Enable/Disable attribution on map. For iOS you need to add MGLMapboxMetricsEnabledSettingShownInApp=YES<br/>to your Info.plist |
 | attributionPosition | `union` | `none` | `false` | Adds attribution offset, e.g. `{top: 8, left: 8}` will put attribution button in top-left corner of the map |
+| tintColor | `union` | `none` | `false` | MapView's tintColor - ios only<br/>@platform ios |
 | logoEnabled | `bool` | `true` | `false` | Enable/Disable the logo on the map. |
 | compassEnabled | `bool` | `none` | `false` | Enable/Disable the compass from appearing on the map |
-| compassViewPosition | `string` | `none` | `false` | Position the compass on a corner of the map |
+| compassViewPosition | `number` | `none` | `false` | Change corner of map the compass starts at. 0: TopLeft, 1: TopRight, 2: BottomLeft, 3: BottomRight |
 | compassViewMargins | `object` | `none` | `false` | Add margins to the compass with x and y values |
 | surfaceView | `bool` | `false` | `false` | [Android only] Enable/Disable use of GLSurfaceView insted of TextureView. |
 | onPress | `func` | `none` | `false` | Map press listener, gets called when a user presses the map |

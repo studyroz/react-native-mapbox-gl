@@ -9,6 +9,7 @@ import {
   isAndroid,
 } from '../utils';
 import {getFilter} from '../utils/filterUtils';
+import {copyPropertiesAsDeprecated} from '../utils/deprecation';
 
 import AbstractSource from './AbstractSource';
 import NativeBridgeComponent from './NativeBridgeComponent';
@@ -28,7 +29,7 @@ class VectorSource extends NativeBridgeComponent(AbstractSource) {
     /**
      * A string that uniquely identifies the source.
      */
-    id: PropTypes.string,
+    id: PropTypes.string.isRequired,
 
     /**
      * A URL to a TileJSON configuration file describing the source’s contents and other metadata.
@@ -69,6 +70,11 @@ class VectorSource extends NativeBridgeComponent(AbstractSource) {
     /**
      * Source press listener, gets called when a user presses one of the children layers only
      * if that layer has a higher z-index than another source layers
+     *
+     * @param {Object} event
+     * @param {Object[]} event.features - the geojson features that have hit by the press (might be multiple)
+     * @param {Object} event.coordinates - the coordinates of the click
+     * @param {Object} event.point - the point of the click
      */
     onPress: PropTypes.func,
 
@@ -76,7 +82,13 @@ class VectorSource extends NativeBridgeComponent(AbstractSource) {
      * Overrides the default touch hitbox(44x44 pixels) for the source layers
      */
     hitbox: PropTypes.shape({
+      /**
+       * `width` of hitbox
+       */
       width: PropTypes.number.isRequired,
+      /**
+       * `height` of hitbox
+       */
       height: PropTypes.number.isRequired,
     }),
   };
@@ -119,6 +131,35 @@ class VectorSource extends NativeBridgeComponent(AbstractSource) {
     return res.data;
   }
 
+  onPress(event) {
+    const {
+      nativeEvent: {
+        payload: {features, coordinates, point},
+      },
+    } = event;
+    let newEvent = {
+      features,
+      coordinates,
+      point,
+    };
+    newEvent = copyPropertiesAsDeprecated(
+      event,
+      newEvent,
+      (key) => {
+        console.warn(
+          `event.${key} is deprecated on VectorSource#onPress, please use event.features`,
+        );
+      },
+      {
+        nativeEvent: (origNativeEvent) => ({
+          ...origNativeEvent,
+          payload: features[0],
+        }),
+      },
+    );
+    this.props.onPress(newEvent);
+  }
+
   render() {
     const props = {
       id: this.props.id,
@@ -130,9 +171,9 @@ class VectorSource extends NativeBridgeComponent(AbstractSource) {
       attribution: this.props.attribution,
       hitbox: this.props.hitbox,
       hasPressListener: isFunction(this.props.onPress),
-      onMapboxVectorSourcePress: this.props.onPress,
+      onMapboxVectorSourcePress: this.onPress.bind(this),
       onPress: undefined,
-      ref: nativeRef => this._setNativeRef(nativeRef),
+      ref: (nativeRef) => this._setNativeRef(nativeRef),
       onAndroidCallback: isAndroid() ? this._onAndroidCallback : undefined,
     };
     return (

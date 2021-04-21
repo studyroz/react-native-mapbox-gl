@@ -21,10 +21,10 @@ class SetDisplacement extends React.Component {
   }
 
   componentWillUnmount() {
-    MapboxGL.locationManager.dispose();
+    MapboxGL.locationManager.stop();
   }
 
-  onDisplacementChange = index => {
+  onDisplacementChange = (index) => {
     this.setState({minDisplacement: DISPLACEMENT[index]});
   };
 

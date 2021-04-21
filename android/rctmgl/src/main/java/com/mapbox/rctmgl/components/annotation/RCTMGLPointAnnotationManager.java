@@ -1,6 +1,9 @@
 package com.mapbox.rctmgl.components.annotation;
 
+import androidx.annotation.Nullable;
+
 import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.common.MapBuilder;
 import com.facebook.react.uimanager.ThemedReactContext;
@@ -28,7 +31,19 @@ public class RCTMGLPointAnnotationManager extends AbstractEventEmitter<RCTMGLPoi
                 .put(EventKeys.POINT_ANNOTATION_SELECTED, "onMapboxPointAnnotationSelected")
                 .put(EventKeys.POINT_ANNOTATION_DESELECTED, "onMapboxPointAnnotationDeselected")
                 .put(EventKeys.POINT_ANNOTATION_DRAG_START, "onMapboxPointAnnotationDragStart")
+                .put(EventKeys.POINT_ANNOTATION_DRAG, "onMapboxPointAnnotationDrag")
                 .put(EventKeys.POINT_ANNOTATION_DRAG_END, "onMapboxPointAnnotationDragEnd")
+                .build();
+    }
+
+    //region React Methods
+    public static final int METHOD_REFRESH = 2;
+
+    @Nullable
+    @Override
+    public Map<String, Integer> getCommandsMap() {
+        return MapBuilder.<String, Integer>builder()
+                .put("refresh", METHOD_REFRESH)
                 .build();
     }
 
@@ -60,5 +75,14 @@ public class RCTMGLPointAnnotationManager extends AbstractEventEmitter<RCTMGLPoi
     @ReactProp(name="draggable")
     public void setDraggable(RCTMGLPointAnnotation annotation, Boolean draggable) {
         annotation.setDraggable(draggable);
+    }
+
+    @Override
+    public void receiveCommand(RCTMGLPointAnnotation annotation, int commandID, @Nullable ReadableArray args) {
+        switch (commandID) {
+            case METHOD_REFRESH:
+                annotation.refresh();
+                break;
+        }
     }
 }

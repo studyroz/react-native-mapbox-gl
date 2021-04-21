@@ -8,13 +8,15 @@ import android.graphics.RectF;
 import android.location.Location;
 import android.os.Handler;
 import androidx.annotation.NonNull;
+import androidx.annotation.UiThread;
 import android.util.DisplayMetrics;
 import android.util.Pair;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-
+import android.widget.FrameLayout;
+import com.mapbox.mapboxsdk.log.Logger;
 
 import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.ReactContext;
@@ -32,13 +34,14 @@ import com.mapbox.mapboxsdk.camera.CameraUpdate;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.geometry.LatLngBounds;
 import com.mapbox.mapboxsdk.geometry.VisibleRegion;
-import com.mapbox.mapboxsdk.log.Logger;
+import com.mapbox.mapboxsdk.maps.AttributionDialogManager;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.MapboxMapOptions;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.mapboxsdk.maps.Style;
 import com.mapbox.mapboxsdk.maps.UiSettings;
+import com.mapbox.mapboxsdk.plugins.localization.LocalizationPlugin;
 import com.mapbox.mapboxsdk.plugins.annotation.OnSymbolClickListener;
 import com.mapbox.mapboxsdk.plugins.annotation.OnSymbolDragListener;
 import com.mapbox.mapboxsdk.plugins.annotation.Symbol;
@@ -49,7 +52,13 @@ import com.mapbox.mapboxsdk.style.layers.Property;
 import com.mapbox.rctmgl.R;
 import com.mapbox.rctmgl.components.AbstractMapFeature;
 import com.mapbox.rctmgl.components.annotation.RCTMGLPointAnnotation;
+import com.mapbox.rctmgl.components.annotation.RCTMGLMarkerView;
+import com.mapbox.rctmgl.components.annotation.MarkerView;
+import com.mapbox.rctmgl.components.annotation.MarkerViewManager;
 import com.mapbox.rctmgl.components.camera.RCTMGLCamera;
+import com.mapbox.rctmgl.components.images.RCTMGLImages;
+import com.mapbox.rctmgl.components.location.LocationComponentManager;
+import com.mapbox.rctmgl.components.location.RCTMGLNativeUserLocation;
 import com.mapbox.rctmgl.components.mapview.helpers.CameraChangeTracker;
 import com.mapbox.rctmgl.components.styles.layers.RCTLayer;
 import com.mapbox.rctmgl.components.styles.light.RCTMGLLight;
@@ -74,6 +83,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 
 import javax.annotation.Nullable;
 
@@ -109,11 +119,14 @@ public class RCTMGLMapView extends MapView implements
     private List<AbstractMapFeature> mQueuedFeatures;
     private Map<String, RCTMGLPointAnnotation> mPointAnnotations;
     private Map<String, RCTSource> mSources;
+    private List<RCTMGLImages> mImages;
 
     private CameraChangeTracker mCameraChangeTracker = new CameraChangeTracker();
     private List<Pair<Integer, ReadableArray>> mPreRenderMethods = new ArrayList<>();
 
     private MapboxMap mMap;
+
+    private LocalizationPlugin mLocalizationPlugin;
 
     private String mStyleURL;
 
@@ -128,6 +141,7 @@ public class RCTMGLMapView extends MapView implements
     private Boolean mLogoEnabled;
     private Boolean mCompassEnabled;
     private ReadableMap mCompassViewMargins;
+    private int mCompassViewPosition = -1;
     private Boolean mZoomEnabled;
 
     private String mDraggableLayerID;    
@@ -139,7 +153,12 @@ public class RCTMGLMapView extends MapView implements
 
     private HashSet<String> mHandledMapChangedEvents = null;
 
+    private MarkerViewManager markerViewManager = null;
+    private ViewGroup mOffscreenAnnotationViewContainer = null;
+
     private boolean mAnnotationClicked = false;
+
+    private LocationComponentManager mLocationComponentManager = null;
 
     public RCTMGLMapView(Context context, RCTMGLMapViewManager manager, MapboxMapOptions options) {
         super(context, options);
@@ -153,6 +172,7 @@ public class RCTMGLMapView extends MapView implements
         mManager = manager;
 
         mSources = new HashMap<>();
+        mImages = new ArrayList<>();
         mPointAnnotations = new HashMap<>();
         mQueuedFeatures = new ArrayList<>();
         mFeatures = new ArrayList<>();
@@ -229,15 +249,23 @@ public class RCTMGLMapView extends MapView implements
             RCTSource source = (RCTSource) childView;
             mSources.put(source.getID(), source);
             feature = (AbstractMapFeature) childView;
+        } else if (childView instanceof RCTMGLImages) {
+            RCTMGLImages images = (RCTMGLImages) childView;
+            mImages.add(images);
+            feature = (AbstractMapFeature) childView;
         } else if (childView instanceof RCTMGLLight) {
             feature = (AbstractMapFeature) childView;
-        } else if (childView instanceof RCTMGLPointAnnotation) {
+        } else if (childView instanceof RCTMGLNativeUserLocation) {
+            feature = (AbstractMapFeature) childView;
+        }  else if (childView instanceof RCTMGLPointAnnotation) {
             RCTMGLPointAnnotation annotation = (RCTMGLPointAnnotation) childView;
             mPointAnnotations.put(annotation.getID(), annotation);
             feature = (AbstractMapFeature) childView;
+        } else if (childView instanceof RCTMGLMarkerView) {
+            RCTMGLMarkerView marker = (RCTMGLMarkerView) childView;
+            feature = (AbstractMapFeature) childView;
         } else if (childView instanceof RCTMGLCamera) {
-            RCTMGLCamera camera = (RCTMGLCamera) childView;
-            mCamera = camera;
+            mCamera = (RCTMGLCamera) childView;
             feature = (AbstractMapFeature) childView;
         } else if (childView instanceof RCTLayer) {
             feature = (RCTLayer) childView;
@@ -277,6 +305,9 @@ public class RCTMGLMapView extends MapView implements
             }
 
             mPointAnnotations.remove(annotation.getID());
+        } else if (feature instanceof RCTMGLImages) {
+            RCTMGLImages images = (RCTMGLImages) feature;
+            mImages.remove(images);
         }
 
         feature.removeFromMap(this);
@@ -442,6 +473,7 @@ public class RCTMGLMapView extends MapView implements
                 createSymbolManager(style);
                 setUpImage(style);
                 addQueuedFeatures();
+                setupLocalization(style);
             }
         });
 
@@ -514,9 +546,12 @@ public class RCTMGLMapView extends MapView implements
             }
 
             @Override
-            // Left empty on purpose
             public void onAnnotationDrag(Symbol symbol) {
-
+                final long selectedMarkerID = symbol.getId();
+                RCTMGLPointAnnotation annotation = getPointAnnotationByMarkerID(selectedMarkerID);
+                if (annotation != null) {
+                    annotation.onDrag();
+                }
             }
 
             @Override
@@ -534,7 +569,7 @@ public class RCTMGLMapView extends MapView implements
     }
 
     public void addQueuedFeatures() {
-        if (mQueuedFeatures.size() > 0) {
+        if (mQueuedFeatures != null && mQueuedFeatures.size() > 0) {
             for (int i = 0; i < mQueuedFeatures.size(); i++) {
                 AbstractMapFeature feature = mQueuedFeatures.get(i);
                 feature.addToMap(this);
@@ -542,6 +577,18 @@ public class RCTMGLMapView extends MapView implements
             }
             mQueuedFeatures = null;
         }
+    }
+
+    private void setupLocalization(Style style) {
+      mLocalizationPlugin = new LocalizationPlugin(RCTMGLMapView.this, mMap, style);
+      if (mLocalizeLabels) {
+          try {
+              mLocalizationPlugin.matchMapLanguageWithDeviceDefault();
+          } catch (Exception e) {
+              final String localeString = Locale.getDefault().toString();
+              Logger.w(LOG_TAG, String.format("Could not find matching locale for %s", localeString));
+          }
+      }
     }
 
     @Override
@@ -558,7 +605,13 @@ public class RCTMGLMapView extends MapView implements
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         if (!mPaused) {
+            if (markerViewManager != null) {
+                markerViewManager.removeViews();
+            }
             super.onLayout(changed, left, top, right, bottom);
+            if (markerViewManager != null) {
+                markerViewManager.restoreViews();
+            }
         }
     }
 
@@ -572,7 +625,7 @@ public class RCTMGLMapView extends MapView implements
         PointF screenPoint = mMap.getProjection().toScreenLocation(point);
         List<RCTSource> touchableSources = getAllTouchableSources();
 
-        Map<String, Feature> hits = new HashMap<>();
+        Map<String, List<Feature>> hits = new HashMap<>();
         List<RCTSource> hitTouchableSources = new ArrayList<>();
         for (RCTSource touchableSource : touchableSources) {
             Map<String, Double> hitbox = touchableSource.getTouchHitbox();
@@ -589,7 +642,7 @@ public class RCTMGLMapView extends MapView implements
 
             List<Feature> features = mMap.queryRenderedFeatures(hitboxF, touchableSource.getLayerIDs());
             if (features.size() > 0) {
-                hits.put(touchableSource.getID(), features.get(0));
+                hits.put(touchableSource.getID(), features);
                 hitTouchableSources.add(touchableSource);
             }
         }
@@ -597,7 +650,11 @@ public class RCTMGLMapView extends MapView implements
         if (hits.size() > 0) {
             RCTSource source = getTouchableSourceWithHighestZIndex(hitTouchableSources);
             if (source != null && source.hasPressListener()) {
-                source.onPress(hits.get(source.getID()));
+                source.onPress(new RCTSource.OnPressEvent(
+                        hits.get(source.getID()),
+                        point,
+                        screenPoint
+                        ));
                 return true;
             }
         }
@@ -718,13 +775,14 @@ public class RCTMGLMapView extends MapView implements
 
     @Override
     public void onStyleImageMissing(@NonNull String id) {
-        List<RCTMGLShapeSource> allShapeSources = getAllShapeSources();
-        for (RCTMGLShapeSource shapeSource : allShapeSources) {
-            if (shapeSource.addMissingImageToStyle(id)) {
+        for (RCTMGLImages images : mImages) {
+            if (images.addMissingImageToStyle(id, mMap)) {
                 return;
             }
         }
-
+        for (RCTMGLImages images : mImages) {
+            images.sendImageMissingEvent(id, mMap);
+        }
     }
 
     private float getDisplayDensity() {
@@ -792,6 +850,11 @@ public class RCTMGLMapView extends MapView implements
 
     public void setReactCompassViewMargins(ReadableMap compassViewMargins) {
         mCompassViewMargins = compassViewMargins;
+        updateUISettings();
+    }
+
+    public void setReactCompassViewPosition(int compassViewPosition) {
+        mCompassViewPosition = compassViewPosition;
         updateUISettings();
     }
 
@@ -895,6 +958,9 @@ public class RCTMGLMapView extends MapView implements
     public void getPointInView(String callbackID, LatLng mapCoordinate) {
 
         PointF pointInView = mMap.getProjection().toScreenLocation(mapCoordinate);
+        float density = getDisplayDensity();
+        pointInView.x /= density;
+        pointInView.y /= density;
         WritableMap payload = new WritableNativeMap();
 
         WritableArray array = new WritableNativeArray();
@@ -957,8 +1023,8 @@ public class RCTMGLMapView extends MapView implements
     }
 
     public void showAttribution() {
-        View attributionView = findViewById(com.mapbox.mapboxsdk.R.id.attributionView);
-        attributionView.callOnClick();
+        AttributionDialogManager manager = new AttributionDialogManager(mContext, mMap);
+        manager.onClick(this);
     }
 
     public void setSourceVisibility(final boolean visible, @NonNull final String sourceId, @Nullable final String sourceLayerId) {
@@ -987,6 +1053,14 @@ public class RCTMGLMapView extends MapView implements
 
     public boolean isDestroyed() {
         return mDestroyed;
+    }
+
+    public void getStyle(Style.OnStyleLoaded onStyleLoaded) {
+        if (mMap == null) {
+            return;
+        }
+
+        mMap.getStyle(onStyleLoaded);
     }
 
     private void updateUISettings() {
@@ -1045,12 +1119,44 @@ public class RCTMGLMapView extends MapView implements
             uiSettings.setCompassEnabled(mCompassEnabled);
         }
 
+        if (mCompassViewPosition != -1 && uiSettings.isCompassEnabled()) {
+            switch (mCompassViewPosition) {
+                case 0:
+                    uiSettings.setCompassGravity(Gravity.TOP | Gravity.START);
+                    break;
+                case 1:
+                    uiSettings.setCompassGravity(Gravity.TOP | Gravity.END);
+                    break;
+                case 2:
+                    uiSettings.setCompassGravity(Gravity.BOTTOM | Gravity.END);
+                    break;
+                case 3:
+                    uiSettings.setCompassGravity(Gravity.BOTTOM | Gravity.END);
+                    break;
+            }
+        }
+
         if (mCompassViewMargins != null && uiSettings.isCompassEnabled()) {
             int pixelDensity = (int)getResources().getDisplayMetrics().density;
 
-            int xMargin = mCompassViewMargins.getInt("x") * pixelDensity;
-            int yMargin = mCompassViewMargins.getInt("y") * pixelDensity;
-            uiSettings.setCompassMargins(xMargin, yMargin, xMargin, yMargin);
+            int x = mCompassViewMargins.getInt("x") * pixelDensity;
+            int y = mCompassViewMargins.getInt("y") * pixelDensity;
+
+            switch (uiSettings.getCompassGravity()) {
+                case Gravity.TOP | Gravity.START:
+                    uiSettings.setCompassMargins(x, y, 0, 0);
+                    break;
+                default:
+                case Gravity.TOP | Gravity.END:
+                    uiSettings.setCompassMargins(0, y, x, 0);
+                    break;
+                case Gravity.BOTTOM | Gravity.START:
+                    uiSettings.setCompassMargins(x, 0, 0, y);
+                    break;
+                case Gravity.BOTTOM | Gravity.END:
+                    uiSettings.setCompassMargins(0, 0, x, y);
+                    break;
+            }
         }
 
         if (mZoomEnabled != null && uiSettings.isZoomGesturesEnabled() != mZoomEnabled) {
@@ -1068,13 +1174,13 @@ public class RCTMGLMapView extends MapView implements
         setMaximumFps(mPreferredFramesPerSecond);
     }
 
-    private void updateInsets() {
-        if (mMap == null || mInsets == null) {
-            return;
+    public double[] getContentInset() {
+        if (mInsets == null) {
+            double[] result = {0,0,0,0};
+        
+            return result;
         }
-
-        final DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
-        int top = 0, right = 0, bottom = 0, left = 0;
+        double top = 0, right = 0, bottom = 0, left = 0;
 
         if (mInsets.size() == 4) {
             top = mInsets.getInt(0);
@@ -1093,10 +1199,24 @@ public class RCTMGLMapView extends MapView implements
             left = top;
         }
 
-        mMap.setPadding(Float.valueOf(left * metrics.scaledDensity).intValue(),
-                Float.valueOf(top * metrics.scaledDensity).intValue(),
-                Float.valueOf(right * metrics.scaledDensity).intValue(),
-                Float.valueOf(bottom * metrics.scaledDensity).intValue());
+        final DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
+    
+        double[] result = {left * metrics.scaledDensity, top * metrics.scaledDensity, right * metrics.scaledDensity, bottom * metrics.scaledDensity};
+        return result;
+    }
+
+    private void updateInsets() {
+        if (mMap == null || mInsets == null) {
+            return;
+        }
+
+        double padding[] = getContentInset();
+        double top = padding[1], right = padding[2], bottom = padding[3], left = padding[0];
+
+        mMap.setPadding(Double.valueOf(left).intValue(),
+                Double.valueOf(top).intValue(),
+                Double.valueOf(right).intValue(),
+                Double.valueOf(bottom).intValue());
     }
 
     private void setLifecycleListeners() {
@@ -1141,7 +1261,7 @@ public class RCTMGLMapView extends MapView implements
         try {
             VisibleRegion visibleRegion = mMap.getProjection().getVisibleRegion();
             properties.putArray("visibleBounds", GeoJSONUtils.fromLatLngBounds(visibleRegion.latLngBounds));
-        } catch (Exception ex) {
+        } catch(Exception ex) {
             Logger.e(LOG_TAG, String.format("An error occurred while attempting to make the region: %s", ex.getMessage()));
         }
 
@@ -1151,7 +1271,7 @@ public class RCTMGLMapView extends MapView implements
     public void sendRegionChangeEvent(boolean isAnimated) {
         IEvent event = new MapChangeEvent(this, EventTypes.REGION_DID_CHANGE,
                 makeRegionPayload(new Boolean(isAnimated)));
-        
+
                 mManager.handleEvent(event);
         mCameraChangeTracker.setReason(CameraChangeTracker.EMPTY);
     }
@@ -1312,5 +1432,37 @@ public class RCTMGLMapView extends MapView implements
         );
     }
 
+    /**
+     * PointAnnotations are rendered to a canvas, but react native Image component is
+     * implemented on top of Fresco, and fresco will not load images when their view is
+     * not attached to the window. So we'll have an offscreen view where we add those views
+     * so they can rendered full to canvas.
+     */
+    public ViewGroup offscreenAnnotationViewContainer() {
+        if (mOffscreenAnnotationViewContainer == null) {
+            mOffscreenAnnotationViewContainer = new FrameLayout(getContext());
+            FrameLayout.LayoutParams flParams = new FrameLayout.LayoutParams(0,0);
+            flParams.setMargins(-10000, -10000, -10000,-10000);
+            mOffscreenAnnotationViewContainer.setLayoutParams(flParams);
+            addView(mOffscreenAnnotationViewContainer);
+        }
+        return mOffscreenAnnotationViewContainer;
+    }
 
+    public MarkerViewManager getMarkerViewManager(MapboxMap map) {
+        if (markerViewManager == null) {
+            if (map == null) {
+                throw new Error("makerViewManager should be called one the map has loaded");
+            }
+            markerViewManager = new MarkerViewManager(this, map);
+        }
+        return markerViewManager;
+    }
+
+    public LocationComponentManager getLocationComponentManager() {
+        if (mLocationComponentManager == null) {
+            mLocationComponentManager = new LocationComponentManager(this, mContext);
+        }
+        return mLocationComponentManager;
+    }
 }

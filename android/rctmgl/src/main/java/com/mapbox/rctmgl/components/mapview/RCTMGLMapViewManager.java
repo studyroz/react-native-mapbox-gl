@@ -12,6 +12,7 @@ import com.facebook.react.uimanager.LayoutShadowNode;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.annotations.ReactProp;
 import com.mapbox.mapboxsdk.geometry.LatLngBounds;
+import com.mapbox.mapboxsdk.log.Logger;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.MapboxMapOptions;
 import com.mapbox.rctmgl.components.AbstractEventEmitter;
@@ -177,6 +178,11 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
         mapView.setReactCompassViewMargins(compassViewMargins);
     }
 
+    @ReactProp(name="compassViewPosition")
+    public void setCompassViewPosition(RCTMGLMapView mapView, int compassViewPosition) {
+        mapView.setReactCompassViewPosition(compassViewPosition);
+    }
+
     @ReactProp(name="contentInset")
     public void setContentInset(RCTMGLMapView mapView, ReadableArray array) {
         mapView.setReactContentInset(array);
@@ -327,21 +333,24 @@ public class RCTMGLMapViewManager extends AbstractEventEmitter<RCTMGLMapView> {
         private void diposeNativeMapView() {
             final RCTMGLMapView mapView = mViewManager.getByReactTag(getReactTag());
 
-            RunnableFuture<Void> task = new FutureTask<>(new Runnable() {
-                @Override
-                public void run() {
-                    mapView.dispose();
-                }
-            }, null);
-
-            runOnUiThread(task);
-
-            try {
-                task.get(); // this will block until Runnable completes
-            } catch (InterruptedException | ExecutionException e) {
-                // handle exception
-                Log.e(getClass().getSimpleName() , " diposeNativeMapView() exception destroying map view", e);
+            if (mapView != null)
+            {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run()
+                    {
+                        try
+                        {
+                            mapView.dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.e(getClass().getSimpleName() , " disposeNativeMapView() exception destroying map view", ex);
+                        }
+                    }
+                });
             }
         }
     }
 }
+

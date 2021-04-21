@@ -2,11 +2,15 @@ package com.mapbox.rctmgl.components.styles.sources;
 
 import android.content.Context;
 import androidx.annotation.NonNull;
+
+import android.graphics.PointF;
 import android.view.View;
 
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.common.MapBuilder;
 import com.mapbox.geojson.Feature;
+import com.mapbox.mapboxsdk.geometry.LatLng;
+import com.mapbox.mapboxsdk.log.Logger;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.Style;
 import com.mapbox.mapboxsdk.style.sources.Source;
@@ -25,6 +29,7 @@ import java.util.Map;
 
 public abstract class RCTSource<T extends Source> extends AbstractMapFeature {
     public static final String DEFAULT_ID = "composite";
+    public static final String LOG_TAG = "RCTSource";
 
     public static final double DEFAULT_HITBOX_WIDTH = 44.0;
     public static final double DEFAULT_HITBOX_HEIGHT = 44.0;
@@ -152,7 +157,11 @@ public abstract class RCTSource<T extends Source> extends AbstractMapFeature {
             mQueuedLayers.clear();
         }
         if (mMap != null && mSource != null  && mMap.getStyle() != null) {
-            mMap.getStyle().removeSource(mSource);
+            try {
+                mMap.getStyle().removeSource(mSource);
+            } catch (Throwable ex) {
+                Logger.w(LOG_TAG, String.format("RCTSource.removeFromMap: %s - %s", mSource, ex.getMessage()), ex);
+            }
         }
     }
 
@@ -214,7 +223,20 @@ public abstract class RCTSource<T extends Source> extends AbstractMapFeature {
     }
 
     public abstract T makeSource();
-    public abstract void onPress(Feature feature);
+
+    static public class OnPressEvent {
+        public List<Feature> features;
+        public LatLng latLng;
+        public PointF screenPoint;
+
+        public OnPressEvent(@NonNull List<Feature> features, @NonNull LatLng latLng, @NonNull PointF screenPoint) {
+            this.features = features;
+            this.latLng = latLng;
+            this.screenPoint = screenPoint;
+        }
+    }
+
+    public abstract void onPress(OnPressEvent event);
 
     public static boolean isDefaultSource(String sourceID) {
         return DEFAULT_ID.equals(sourceID);

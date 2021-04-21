@@ -3,7 +3,6 @@ package com.mapbox.rctmgl.modules;
 import android.os.Handler;
 import android.util.Log;
 
-import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -316,7 +315,6 @@ public class RCTMGLModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void addCustomHeader(final String headerName, final String headerValue) {
-        Log.d("header", String.format("add custom header headerName=%s", headerName));
         mReactContext.runOnUiQueueThread(new Runnable() {
             @Override
             public void run() {
@@ -383,9 +381,12 @@ public class RCTMGLModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void getAccessToken(Promise promise) {
-        WritableMap map = Arguments.createMap();
-        map.putString("accessToken", Mapbox.getAccessToken());
-        promise.resolve(map);
+        String token = Mapbox.getAccessToken();
+        if(token == null) {
+            promise.reject("missing_access_token", "No access token has been set");
+        } else {
+            promise.resolve(token);
+        }
     }
 
     @ReactMethod

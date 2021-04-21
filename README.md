@@ -7,27 +7,30 @@ _An unofficial React Native library for building maps with the [Mapbox Maps SDK 
 [![Depfu](https://badges.depfu.com/badges/2eac6b62372619718b7f55ebbf8e9d8f/overview.svg)](https://depfu.com/github/react-native-mapbox-gl/maps?project_id=8248)
 
 ## Installation
+### Prerequisit
+On Android we support from version 6 (API 23) upwards  
 
-**Dependencies**
+
+### Dependencies
 
 - [node](https://nodejs.org)
 - [npm](https://www.npmjs.com/)
 - [React Native](https://facebook.github.io/react-native/) (0.60+)
 
-**Git**
+### Git
 
 ```
 git clone git@github.com:react-native-mapbox-gl/maps.git
 cd maps
 ```
 
-**Yarn**
+### Yarn
 
 ```
 yarn add @react-native-mapbox-gl/maps
 ```
 
-**Npm**
+### Npm
 
 ```
 npm install @react-native-mapbox-gl/maps --save
@@ -49,6 +52,7 @@ npm install @react-native-mapbox-gl/maps --save
 - [Light](/docs/Light.md)
 - [StyleSheet](/docs/StyleSheet.md)
 - [PointAnnotation](/docs/PointAnnotation.md)
+- [MarkerView](/docs/MarkerView.md)
 - [Callout](/docs/Callout.md)
 - [Camera](docs/Camera.md)
 - [UserLocation](docs/UserLocation.md)
@@ -78,11 +82,25 @@ npm install @react-native-mapbox-gl/maps --save
 
 ### Misc
 
+- [MapboxGL](/docs/MapboxGL.md)
 - [CustomHttpHeaders](/docs/CustomHttpHeaders.md)
 
 ## Expo Support
 
 We have a feature request open with Expo if you want to see it get in show your support https://expo.canny.io/feature-requests/p/add-mapbox-gl-support
+
+## Testing with Jest
+
+This library provides some mocks which are necessary for running tests.
+
+Example:
+
+```json
+"jest": {
+  "preset": "react-native",
+  "setupFilesAfterEnv": ["@react-native-mapbox-gl/maps/setup-jest"]
+}
+```
 
 ## Developer Group
 

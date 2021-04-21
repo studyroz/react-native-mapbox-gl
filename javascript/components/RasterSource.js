@@ -10,7 +10,7 @@ const MapboxGL = NativeModules.MGLModule;
 
 export const NATIVE_MODULE_NAME = 'RCTMGLRasterSource';
 
-const isTileTemplateUrl = url =>
+const isTileTemplateUrl = (url) =>
   url &&
   (url.includes('{z}') || url.includes('{bbox-') || url.includes('{quadkey}'));
 
@@ -26,7 +26,7 @@ class RasterSource extends AbstractSource {
     /**
      * A string that uniquely identifies the source.
      */
-    id: PropTypes.string,
+    id: PropTypes.string.isRequired,
 
     /**
      * A URL to a TileJSON configuration file describing the source’s contents and other metadata.

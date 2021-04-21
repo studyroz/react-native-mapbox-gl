@@ -1,16 +1,19 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import {NativeModules, requireNativeComponent} from 'react-native';
-import resolveAssetSource from 'react-native/Libraries/Image/resolveAssetSource';
 
+import {getFilter} from '../utils/filterUtils';
 import {
   toJSONString,
   cloneReactChildrenWithProps,
   viewPropTypes,
   isFunction,
+  isAndroid,
 } from '../utils';
+import {copyPropertiesAsDeprecated} from '../utils/deprecation';
 
 import AbstractSource from './AbstractSource';
+import NativeBridgeComponent from './NativeBridgeComponent';
 
 const MapboxGL = NativeModules.MGLModule;
 
@@ -20,10 +23,8 @@ export const NATIVE_MODULE_NAME = 'RCTMGLShapeSource';
  * ShapeSource is a map content source that supplies vector shapes to be shown on the map.
  * The shape may be a url or a GeoJSON object
  */
-class ShapeSource extends AbstractSource {
+class ShapeSource extends NativeBridgeComponent(AbstractSource) {
   static NATIVE_ASSETS_KEY = 'assets';
-
-  static imageSourcePrefix = '__shape_source_images__';
 
   static propTypes = {
     ...viewPropTypes,
@@ -31,7 +32,7 @@ class ShapeSource extends AbstractSource {
     /**
      * A string that uniquely identifies the source.
      */
-    id: PropTypes.string,
+    id: PropTypes.string.isRequired,
 
     /**
      * An HTTP(S) URL, absolute file URL, or local file URL relative to the current application’s resource bundle.
@@ -85,19 +86,13 @@ class ShapeSource extends AbstractSource {
     tolerance: PropTypes.number,
 
     /**
-     * Specifies the external images in key-value pairs required for the shape source.
-     * If you have an asset under Image.xcassets on iOS and the drawables directory on android
-     * you can specify an array of string names with assets as the key `{ assets: ['pin'] }`.
-     *
-     * Deprecated, please use Images#images.
-     */
-    images: PropTypes.object,
-
-    /**
      * Source press listener, gets called when a user presses one of the children layers only
      * if that layer has a higher z-index than another source layers
      *
-     * @param {NativeSyntheticEvent<GeoJSONFeatureEvent>} event - event with geojson feature as payload
+     * @param {Object} event
+     * @param {Object[]} event.features - the geojson features that have hit by the press (might be multiple)
+     * @param {Object} event.coordinates - the coordinates of the click
+     * @param {Object} event.point - the point of the click
      * @return void
      */
     onPress: PropTypes.func,
@@ -106,7 +101,13 @@ class ShapeSource extends AbstractSource {
      * Overrides the default touch hitbox(44x44 pixels) for the source layers
      */
     hitbox: PropTypes.shape({
+      /**
+       * `width` of hitbox
+       */
       width: PropTypes.number.isRequired,
+      /**
+       * `height` of hitbox
+       */
       height: PropTypes.number.isRequired,
     }),
   };
@@ -114,6 +115,37 @@ class ShapeSource extends AbstractSource {
   static defaultProps = {
     id: MapboxGL.StyleSource.DefaultSourceID,
   };
+
+  constructor(props) {
+    super(props, NATIVE_MODULE_NAME);
+  }
+
+  _setNativeRef(nativeRef) {
+    this._nativeRef = nativeRef;
+    super._runPendingNativeCommands(nativeRef);
+  }
+
+  /**
+   * Returns all features from the source that match the query parameters regardless of whether or not the feature is
+   * currently rendered on the map.
+   *
+   * @example
+   * shapeSource.features()
+   *
+   * @param  {Array=} filter - an optional filter statement to filter the returned Features.
+   * @return {FeatureCollection}
+   */
+  async features(filter = []) {
+    const res = await this._runNativeCommand('features', this._nativeRef, [
+      getFilter(filter),
+    ]);
+
+    if (isAndroid()) {
+      return JSON.parse(res.data);
+    }
+
+    return res.data;
+  }
 
   setNativeProps(props) {
     const shallowProps = Object.assign({}, props);
@@ -133,39 +165,33 @@ class ShapeSource extends AbstractSource {
     return toJSONString(this.props.shape);
   }
 
-  _getImages() {
-    if (!this.props.images) {
-      return;
-    }
-    if (!this.props.id.startsWith(ShapeSource.imageSourcePrefix)) {
-      console.warn(
-        'ShapeSource#images is deprecated, please use Images#images',
-      );
-    }
-
-    const images = {};
-    let nativeImages = [];
-
-    const imageNames = Object.keys(this.props.images);
-    for (const imageName of imageNames) {
-      if (
-        imageName === ShapeSource.NATIVE_ASSETS_KEY &&
-        Array.isArray(this.props.images[ShapeSource.NATIVE_ASSETS_KEY])
-      ) {
-        nativeImages = this.props.images[ShapeSource.NATIVE_ASSETS_KEY];
-        continue;
-      }
-
-      const res = resolveAssetSource(this.props.images[imageName]);
-      if (res && res.uri) {
-        images[imageName] = res;
-      }
-    }
-
-    return {
-      images,
-      nativeImages,
+  onPress(event) {
+    const {
+      nativeEvent: {
+        payload: {features, coordinates, point},
+      },
+    } = event;
+    let newEvent = {
+      features,
+      coordinates,
+      point,
     };
+    newEvent = copyPropertiesAsDeprecated(
+      event,
+      newEvent,
+      (key) => {
+        console.warn(
+          `event.${key} is deprecated on ShapeSource#onPress, please use event.features`,
+        );
+      },
+      {
+        nativeEvent: (origNativeEvent) => ({
+          ...origNativeEvent,
+          payload: features[0],
+        }),
+      },
+    );
+    this.props.onPress(newEvent);
   }
 
   render() {
@@ -175,19 +201,20 @@ class ShapeSource extends AbstractSource {
       shape: this._getShape(),
       hitbox: this.props.hitbox,
       hasPressListener: isFunction(this.props.onPress),
-      onMapboxShapeSourcePress: this.props.onPress,
+      onMapboxShapeSourcePress: this.onPress.bind(this),
       cluster: this.props.cluster ? 1 : 0,
       clusterRadius: this.props.clusterRadius,
       clusterMaxZoomLevel: this.props.clusterMaxZoomLevel,
       maxZoomLevel: this.props.maxZoomLevel,
       buffer: this.props.buffer,
       tolerance: this.props.tolerance,
-      ...this._getImages(),
       onPress: undefined,
+      ref: (nativeRef) => this._setNativeRef(nativeRef),
+      onAndroidCallback: isAndroid() ? this._onAndroidCallback : undefined,
     };
 
     return (
-      <RCTMGLShapeSource ref="nativeSource" {...props}>
+      <RCTMGLShapeSource {...props}>
         {cloneReactChildrenWithProps(this.props.children, {
           sourceID: this.props.id,
         })}
@@ -201,7 +228,6 @@ const RCTMGLShapeSource = requireNativeComponent(
   ShapeSource,
   {
     nativeOnly: {
-      nativeImages: true,
       hasPressListener: true,
       onMapboxShapeSourcePress: true,
     },
