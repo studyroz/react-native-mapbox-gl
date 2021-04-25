@@ -54,6 +54,7 @@ public class RCTMGLNativeUserLocation extends AbstractMapFeature implements OnMa
         }
 
         LocationComponentManager locationComponent = mMapView.getLocationComponentManager();
+        locationComponent.update(style);
         locationComponent.showUserLocation(mEnabled);
     }
 
