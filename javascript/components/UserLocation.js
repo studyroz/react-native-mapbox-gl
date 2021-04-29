@@ -146,10 +146,6 @@ class UserLocation extends React.Component {
       running: this.needsLocationManagerRunning(),
     });
 
-    if (this.renderMode === UserLocation.RenderMode.Native) {
-      return;
-    }
-
     locationManager.setMinDisplacement(this.props.minDisplacement);
   }
 
@@ -198,9 +194,6 @@ class UserLocation extends React.Component {
    * @return {boolean}
    */
   needsLocationManagerRunning() {
-    if (this.props.renderMode === UserLocation.RenderMode.Native) {
-      return false;
-    }
     return !!this.props.onUpdate || this.props.visible;
   }
 
