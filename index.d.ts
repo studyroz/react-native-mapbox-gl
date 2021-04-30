@@ -838,6 +838,7 @@ export interface HeatmapLayerProps extends LayerBaseProps {
 
 export interface ImagesProps extends ViewProps {
   images?: {assets?: string[]} & {[key: string]: ImageSourcePropType};
+  nativeAssetImages?: string[]
 }
 
 export interface ImageSourceProps extends ViewProps {
