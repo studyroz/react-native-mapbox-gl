@@ -1,11 +1,9 @@
 package com.mapbox.rctmgl.components.location;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.location.Location;
 
-import androidx.annotation.NonNull;
-
-import com.mapbox.android.core.permissions.PermissionsManager;
 import com.mapbox.mapboxsdk.location.LocationComponent;
 import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions;
 import com.mapbox.mapboxsdk.location.LocationComponentOptions;
@@ -17,7 +15,8 @@ import com.mapbox.mapboxsdk.maps.Style;
 import com.mapbox.rctmgl.R;
 import com.mapbox.rctmgl.components.mapview.RCTMGLMapView;
 import com.mapbox.rctmgl.location.LocationManager;
-import com.mapbox.rctmgl.location.UserTrackingMode;
+
+import androidx.annotation.NonNull;
 
 /**
  * The LocationComponent on android implements both location tracking and display of user's current location.
@@ -134,7 +133,11 @@ public class LocationComponentManager {
     }
 
     LocationComponentOptions options(boolean displayUserLocation) {
-        LocationComponentOptions.Builder builder = LocationComponentOptions.builder(mContext);
+        int color = Color.rgb(0, 122, 255);
+        LocationComponentOptions.Builder builder = LocationComponentOptions.builder(mContext)
+                .bearingTintColor(color)
+                .foregroundTintColor(color)
+                .accuracyColor(color);
         if (!displayUserLocation) {
             builder = builder
                     .padding(mMap.getPadding())
