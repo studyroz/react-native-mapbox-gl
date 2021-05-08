@@ -137,7 +137,8 @@ public class LocationComponentManager {
         LocationComponentOptions.Builder builder = LocationComponentOptions.builder(mContext)
                 .bearingTintColor(color)
                 .foregroundTintColor(color)
-                .accuracyColor(color);
+                .accuracyColor(color)
+                .accuracyAlpha(0);
         if (!displayUserLocation) {
             builder = builder
                     .padding(mMap.getPadding())
