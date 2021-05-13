@@ -6,17 +6,22 @@ import android.location.Location;
 
 import com.mapbox.mapboxsdk.location.LocationComponent;
 import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions;
+import com.mapbox.mapboxsdk.location.LocationComponentConstants;
 import com.mapbox.mapboxsdk.location.LocationComponentOptions;
 import com.mapbox.mapboxsdk.location.OnCameraTrackingChangedListener;
 import com.mapbox.mapboxsdk.location.modes.CameraMode;
 import com.mapbox.mapboxsdk.location.modes.RenderMode;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.Style;
+import com.mapbox.mapboxsdk.style.layers.Layer;
+import com.mapbox.mapboxsdk.style.layers.Property;
 import com.mapbox.rctmgl.R;
 import com.mapbox.rctmgl.components.mapview.RCTMGLMapView;
 import com.mapbox.rctmgl.location.LocationManager;
 
 import androidx.annotation.NonNull;
+
+import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.visibility;
 
 /**
  * The LocationComponent on android implements both location tracking and display of user's current location.
@@ -31,7 +36,7 @@ public class LocationComponentManager {
     private LocationComponent mLocationComponent = null;
     private Context mContext = null;
 
-        // state
+    // state
     private @CameraMode.Mode int mCameraMode = CameraMode.NONE;
     private @RenderMode.Mode int mRenderMode = RenderMode.COMPASS;
 
@@ -68,6 +73,7 @@ public class LocationComponentManager {
         if (mShowingUserLocation) {
             mLocationComponent.setRenderMode(renderMode);
         }
+        hideAccuracyLayer();
     }
 
     public void addOnCameraTrackingChangedListener(OnCameraTrackingChangedListener onCameraTrackingChangedListener) {
@@ -91,6 +97,7 @@ public class LocationComponentManager {
         } else {
             mLocationComponent.setCameraMode(CameraMode.NONE);
         }
+        hideAccuracyLayer();
     }
 
     public boolean hasLocationComponent() {
@@ -99,6 +106,15 @@ public class LocationComponentManager {
 
     public void forceLocationUpdate(Location location) {
         mLocationComponent.forceLocationUpdate(location);
+    }
+
+    private void hideAccuracyLayer() {
+        if (mMap != null && mMap.getStyle() != null) {
+            Layer accuracyLayer = mMap.getStyle().getLayer(LocationComponentConstants.ACCURACY_LAYER);
+            if (accuracyLayer != null) {
+                accuracyLayer.setProperties(visibility(Property.NONE));
+            }
+        }
     }
 
     public void update(@NonNull Style style) {
@@ -137,8 +153,7 @@ public class LocationComponentManager {
         LocationComponentOptions.Builder builder = LocationComponentOptions.builder(mContext)
                 .bearingTintColor(color)
                 .foregroundTintColor(color)
-                .accuracyColor(color)
-                .accuracyAlpha(0);
+                .enableStaleState(false);
         if (!displayUserLocation) {
             builder = builder
                     .padding(mMap.getPadding())
