@@ -1,6 +1,7 @@
 package com.mapbox.rctmgl.components.styles.sources;
 
 import android.content.Context;
+import android.graphics.RectF;
 
 import com.mapbox.mapboxsdk.style.sources.Source;
 import com.mapbox.mapboxsdk.style.sources.TileSet;
@@ -19,6 +20,7 @@ public abstract class RCTMGLTileSource<T extends Source> extends RCTSource<T> {
     private Integer mMaxZoomLevel;
 
     private boolean mIsTmsSource;
+    private RectF bounds;
 
     public RCTMGLTileSource(Context context) {
         super(context);
@@ -72,6 +74,14 @@ public abstract class RCTMGLTileSource<T extends Source> extends RCTSource<T> {
         this.mTileUrlTemplates = tileUrlTemplates;
     }
 
+    public RectF getBounds() {
+        return bounds;
+    }
+
+    public void setBounds(RectF bounds) {
+        this.bounds = bounds;
+    }
+
     public TileSet buildTileset() {
         String[] tileUrlTemplates = mTileUrlTemplates.toArray(new String[mTileUrlTemplates.size()]);
         TileSet tileSet = new TileSet(TILE_SPEC_VERSION, tileUrlTemplates);
@@ -90,6 +100,10 @@ public abstract class RCTMGLTileSource<T extends Source> extends RCTSource<T> {
 
         if (mAttribution != null) {
             tileSet.setAttribution(mAttribution);
+        }
+
+        if (bounds != null) {
+            tileSet.setBounds(bounds.left, bounds.bottom, bounds.right, bounds.top);
         }
 
         return tileSet;

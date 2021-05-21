@@ -12,5 +12,6 @@
 @interface RCTMGLRasterSource : RCTMGLTileSource
 
 @property (nonatomic, strong) NSNumber *tileSize;
+@property (nonatomic, strong) NSArray<NSArray<NSNumber *> *> *sourceBounds;
 
 @end

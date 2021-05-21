@@ -759,6 +759,7 @@ export interface TileSourceProps extends ViewProps {
   tileUrlTemplates?: Array<string>;
   minZoomLevel?: number;
   maxZoomLevel?: number;
+  bounds?: [GeoJSON.Position, GeoJSON.Position];
 }
 
 export interface VectorSourceProps extends TileSourceProps {
