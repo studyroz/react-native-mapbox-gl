@@ -44,6 +44,8 @@ NSString *const RCT_MAPBOX_VECTOR_SOURCE_LAYER_PRESS = @"vectorsourcelayerpress"
 
 NSString *const RCT_MAPBOX_EVENT_DRAG = @"drag";
 NSString *const RCT_MAPBOX_EVENT_DRAG_END = @"dragend";
+NSString *const RCT_MAPBOX_IMAGES_MISSING_IMAGE = @"imagesmissingimage";
+
 NSString *const RCT_MAPBOX_USER_LOCATION_UPDATE = @"MapboxUserLocationUpdate";
 
 @end

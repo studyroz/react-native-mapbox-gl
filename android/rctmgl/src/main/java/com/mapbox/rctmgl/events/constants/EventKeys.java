@@ -22,12 +22,16 @@ public class EventKeys {
     public static final String POINT_ANNOTATION_SELECTED = ns("pointannotation.selected");
     public static final String POINT_ANNOTATION_DESELECTED = ns("pointannotation.deselected");
     public static final String POINT_ANNOTATION_DRAG_START = ns("pointannotation.dragstart");
+    public static final String POINT_ANNOTATION_DRAG = ns("pointannotation.drag");
     public static final String POINT_ANNOTATION_DRAG_END = ns("pointannotation.dragend");
 
     // source events
     public static final String SHAPE_SOURCE_LAYER_CLICK = ns("shapesource.layer.pressed");
     public static final String VECTOR_SOURCE_LAYER_CLICK = ns("vectorsource.layer.pressed");
     public static final String RASTER_SOURCE_LAYER_CLICK = ns("rastersource.layer.pressed");
+
+    // images event
+    public static final String IMAGES_MISSING = ns("images.missing");
 
     // location events
     public static final String USER_LOCATION_UPDATE = ns("user.location.update");

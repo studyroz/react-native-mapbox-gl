@@ -316,7 +316,6 @@ public class RCTMGLModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void addCustomHeader(final String headerName, final String headerValue) {
-        Log.d("header", String.format("add custom header headerName=%s", headerName));
         mReactContext.runOnUiQueueThread(new Runnable() {
             @Override
             public void run() {
@@ -383,9 +382,12 @@ public class RCTMGLModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void getAccessToken(Promise promise) {
-        WritableMap map = Arguments.createMap();
-        map.putString("accessToken", Mapbox.getAccessToken());
-        promise.resolve(map);
+        String token = Mapbox.getAccessToken();
+        if(token == null) {
+            promise.reject("missing_access_token", "No access token has been set");
+        } else {
+            promise.resolve(token);
+        }
     }
 
     @ReactMethod

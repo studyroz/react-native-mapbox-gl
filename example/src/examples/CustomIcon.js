@@ -1,6 +1,7 @@
 import React from 'react';
 import {Text} from 'react-native';
 import MapboxGL from '@react-native-mapbox-gl/maps';
+import {featureCollection, feature} from '@turf/helpers';
 
 import sheet from '../styles/sheet';
 import exampleIcon from '../assets/example.png';
@@ -25,7 +26,7 @@ class CustomIcon extends React.Component {
     super(props);
 
     this.state = {
-      featureCollection: MapboxGL.geoUtils.makeFeatureCollection(),
+      featureCollection: featureCollection([]),
     };
 
     this.onPress = this.onPress.bind(this);
@@ -33,27 +34,31 @@ class CustomIcon extends React.Component {
   }
 
   async onPress(e) {
-    const feature = MapboxGL.geoUtils.makeFeature(e.geometry);
-    feature.id = `${Date.now()}`;
+    const aFeature = feature(e.geometry);
+    aFeature.id = `${Date.now()}`;
 
     this.setState({
-      featureCollection: MapboxGL.geoUtils.addToFeatureCollection(
-        this.state.featureCollection,
-        feature,
-      ),
+      featureCollection: featureCollection([
+        ...this.state.featureCollection.features,
+        aFeature,
+      ]),
     });
   }
 
-  onSourceLayerPress(e) {
-    const feature = e.nativeEvent.payload;
-    console.log('You pressed a layer here is your feature', feature); // eslint-disable-line
+  onSourceLayerPress({features, coordinates, point}) {
+    console.log(
+      'You pressed a layer here are your features:',
+      features,
+      coordinates,
+      point,
+    );
   }
 
   render() {
     return (
       <Page {...this.props}>
         <MapboxGL.MapView
-          ref={c => (this._map = c)}
+          ref={(c) => (this._map = c)}
           onPress={this.onPress}
           style={sheet.matchParent}>
           <MapboxGL.Camera

@@ -18,6 +18,7 @@
 #import "CameraUpdateQueue.h"
 #import "RCTMGLUserLocation.h"
 #import "FilterParser.h"
+#import "RCTMGLImages.h"
 
 @interface RCTMGLMapViewManager() <MGLMapViewDelegate, UIGestureRecognizerDelegate>
 
@@ -27,9 +28,6 @@
 
 @implementation RCTMGLMapViewManager
 
-// prevents SDK from crashing and cluttering logs
-// since we don't have access to the frame right away
-static CGRect const RCT_MAPBOX_MIN_MAP_FRAME = { { 0.0f, 0.0f }, { 64.0f, 64.0f } };
 
 RCT_EXPORT_MODULE(RCTMGLMapView)
 
@@ -38,9 +36,16 @@ RCT_EXPORT_MODULE(RCTMGLMapView)
     return YES;
 }
 
+// prevents SDK from crashing and cluttering logs
+// since we don't have access to the frame right away
+- (CGRect)defaultFrame
+{
+    return [[UIScreen mainScreen] bounds];
+}
+
 - (UIView *)view
 {
-    RCTMGLMapView *mapView = [[RCTMGLMapView alloc] initWithFrame:RCT_MAPBOX_MIN_MAP_FRAME];
+    RCTMGLMapView *mapView = [[RCTMGLMapView alloc] initWithFrame:[self defaultFrame]];
     mapView.delegate = self;
 
 
@@ -111,13 +116,14 @@ RCT_REMAP_VIEW_PROPERTY(zoomEnabled, reactZoomEnabled, BOOL)
 RCT_REMAP_VIEW_PROPERTY(compassViewPosition, reactCompassViewPosition, NSInteger *)
 RCT_REMAP_VIEW_PROPERTY(compassViewMargins, reactCompassViewMargins, CGPoint)
 
-
 RCT_REMAP_VIEW_PROPERTY(contentInset, reactContentInset, NSArray)
 RCT_REMAP_VIEW_PROPERTY(styleURL, reactStyleURL, NSString)
 
 RCT_REMAP_VIEW_PROPERTY(draggableLayerID, reactDraggableLayerID, NSString)
 
 RCT_REMAP_VIEW_PROPERTY(preferredFramesPerSecond, reactPreferredFramesPerSecond, NSInteger)
+
+RCT_EXPORT_VIEW_PROPERTY(tintColor, UIColor)
 
 RCT_EXPORT_VIEW_PROPERTY(onPress, RCTBubblingEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onDrag, RCTBubblingEventBlock)
@@ -311,10 +317,7 @@ RCT_EXPORT_METHOD(queryRenderedFeaturesInRect:(nonnull NSNumber*)reactTag
                                                         inStyleLayersWithIdentifiers:layerIDSet
                                                         predicate:predicate];
         
-        NSMutableArray<NSDictionary*> *features = [[NSMutableArray alloc] init];
-        for (int i = 0; i < shapes.count; i++) {
-            [features addObject:shapes[i].geoJSONDictionary];
-        }
+        NSArray<NSDictionary*>* features = [self featuresToJSON:shapes];
         
         resolve(@{ @"data": @{ @"type": @"FeatureCollection", @"features": features }});
     }];
@@ -387,7 +390,7 @@ RCT_EXPORT_METHOD(setSourceVisibility:(nonnull NSNumber *)reactTag
     CGPoint screenPoint = [recognizer locationInView:mapView];
     NSArray<RCTMGLSource *> *touchableSources = [mapView getAllTouchableSources];
     
-    NSMutableDictionary<NSString *, id<MGLFeature>> *hits = [[NSMutableDictionary alloc] init];
+    NSMutableDictionary<NSString *, NSArray<id<MGLFeature>>* > *hits = [[NSMutableDictionary alloc] init];
     NSMutableArray<RCTMGLSource *> *hitTouchableSources = [[NSMutableArray alloc] init];
     for (RCTMGLSource *touchableSource in touchableSources) {
         NSDictionary<NSString *, NSNumber *> *hitbox = touchableSource.hitbox;
@@ -403,7 +406,7 @@ RCT_EXPORT_METHOD(setSourceVisibility:(nonnull NSNumber *)reactTag
                                                      predicate:nil];
         
         if (features.count > 0) {
-            hits[touchableSource.id] = features[0];
+            hits[touchableSource.id] = features;
             [hitTouchableSources addObject:touchableSource];
         }
     }
@@ -411,14 +414,27 @@ RCT_EXPORT_METHOD(setSourceVisibility:(nonnull NSNumber *)reactTag
     if (hits.count > 0) {
         RCTMGLSource *source = [mapView getTouchableSourceWithHighestZIndex:hitTouchableSources];
         if (source != nil && source.hasPressListener) {
-            NSDictionary<NSString *, id> *geoJSONDict = hits[source.id].geoJSONDictionary;
+            NSArray* geoJSONDicts = [self featuresToJSON: hits[source.id]];
             
             NSString *eventType = RCT_MAPBOX_VECTOR_SOURCE_LAYER_PRESS;
             if ([source isKindOfClass:[RCTMGLShapeSource class]]) {
                 eventType = RCT_MAPBOX_SHAPE_SOURCE_LAYER_PRESS;
             }
 
-            RCTMGLEvent *event = [RCTMGLEvent makeEvent:eventType withPayload:geoJSONDict];
+            CLLocationCoordinate2D coordinate = [mapView convertPoint:screenPoint
+                                                    toCoordinateFromView:mapView];
+            
+            RCTMGLEvent *event = [RCTMGLEvent makeEvent:eventType withPayload: @{
+                @"features": geoJSONDicts,
+                @"point": @{
+                        @"x": [NSNumber numberWithDouble: screenPoint.x],
+                        @"y":[NSNumber numberWithDouble: screenPoint.y]
+                },
+                @"coordinates": @{
+                        @"latitude": [NSNumber numberWithDouble: coordinate.latitude],
+                        @"longitude": [NSNumber numberWithDouble: coordinate.longitude]
+                }
+            }];
             [self fireEvent:event withCallback:source.onPress];
             return;
         }
@@ -479,7 +495,11 @@ RCT_EXPORT_METHOD(setSourceVisibility:(nonnull NSNumber *)reactTag
 - (MGLAnnotationView *)mapView:(MGLMapView *)mapView viewForAnnotation:(id<MGLAnnotation>)annotation
 {
     if ([annotation isKindOfClass:[MGLUserLocation class]] && mapView.userLocation != nil) {
-        return [[RCTMGLUserLocation sharedInstance] builtinUserAnnotation];
+        RCTMGLMapView* reactMapView = ((RCTMGLMapView *) mapView);
+        if (reactMapView.useNativeUserLocationAnnotationView) {
+            return nil;
+        }
+        return [[RCTMGLUserLocation sharedInstance] hiddenUserAnnotation];
     }
     else if ([annotation isKindOfClass:[RCTMGLPointAnnotation class]]) {
         RCTMGLPointAnnotation *rctAnnotation = (RCTMGLPointAnnotation *)annotation;
@@ -610,7 +630,9 @@ RCT_EXPORT_METHOD(setSourceVisibility:(nonnull NSNumber *)reactTag
 - (void)mapView:(MGLMapView *)mapView didFinishLoadingStyle:(MGLStyle *)style
 {
     RCTMGLMapView *reactMapView = (RCTMGLMapView*)mapView;
-    //style.localizesLabels = reactMapView.reactLocalizeLabels;
+    if(reactMapView.reactLocalizeLabels == true) {
+        [style localizeLabelsIntoLocale:nil];
+    }
     
     for (int i = 0; i < reactMapView.sources.count; i++) {
         RCTMGLSource *source = reactMapView.sources[i];
@@ -632,12 +654,16 @@ RCT_EXPORT_METHOD(setSourceVisibility:(nonnull NSNumber *)reactTag
 -(UIImage *)mapView:(MGLMapView *)mapView didFailToLoadImage:(NSString *)imageName
 {
     RCTMGLMapView* reactMapView = ((RCTMGLMapView *) mapView);
-    NSArray<RCTMGLShapeSource *> *shapeSources = [reactMapView getAllShapeSources];
-    for (RCTMGLShapeSource *shapeSource in shapeSources) {
-        if([shapeSource addMissingImageToStyle:imageName]) {
+    NSArray<RCTMGLImages *> *allImages = [reactMapView getAllImages];
+    for (RCTMGLImages *images in allImages) {
+        if([images addMissingImageToStyle:imageName]) {
             // The image was added inside addMissingImageToStyle so we can return nil
             return nil;
         }
+    }
+    
+    for (RCTMGLImages *images in allImages) {
+        [images sendImageMissingEvent:imageName];
     }
     return nil;
 }
@@ -668,6 +694,15 @@ RCT_EXPORT_METHOD(setSourceVisibility:(nonnull NSNumber *)reactTag
                             @"visibleBounds": [RCTMGLUtils fromCoordinateBounds:mapView.visibleCoordinateBounds]
                          };
     return feature.geoJSONDictionary;
+}
+
+- (NSArray<NSDictionary*> *) featuresToJSON:(NSArray<id<MGLFeature>> *) features
+{
+    NSMutableArray<NSDictionary*> *json = [[NSMutableArray alloc] init];
+     for(id<MGLFeature> feature in features) {
+        [json addObject:feature.geoJSONDictionary];
+    }
+    return json;
 }
 
 @end

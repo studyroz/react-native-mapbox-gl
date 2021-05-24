@@ -10,7 +10,7 @@
 
 @implementation RCTMGLRasterSource
 
-- (MGLSource*)makeSource
+- (nullable MGLSource*)makeSource
 {
     if (self.url != nil) {
         NSURL *url = [NSURL URLWithString:self.url];
@@ -27,6 +27,20 @@
     
     if (self.tileSize != nil) {
         options[MGLTileSourceOptionTileSize] = _tileSize;
+    }
+    
+    if (self.sourceBounds != nil && self.sourceBounds.count == 2 && self.sourceBounds[0].count == 2 && self.sourceBounds[1].count == 2) {
+        CLLocationCoordinate2D ne;
+        ne.longitude = self.sourceBounds[0][0].doubleValue;
+        ne.latitude = self.sourceBounds[0][1].doubleValue;
+        CLLocationCoordinate2D sw;
+        sw.longitude = self.sourceBounds[1][0].doubleValue;
+        sw.latitude = self.sourceBounds[1][1].doubleValue;
+        
+        MGLCoordinateBounds bounds;
+        bounds.ne = ne;
+        bounds.sw = sw;
+        options[MGLTileSourceOptionCoordinateBounds] = [NSValue valueWithMGLCoordinateBounds:bounds];
     }
     
     return options;

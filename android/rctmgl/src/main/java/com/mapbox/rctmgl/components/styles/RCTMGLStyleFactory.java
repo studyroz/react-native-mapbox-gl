@@ -197,6 +197,9 @@ public class RCTMGLStyleFactory {
             case "symbolAvoidEdges":
               RCTMGLStyleFactory.setSymbolAvoidEdges(layer, styleValue);
               break;
+            case "symbolSortKey":
+              RCTMGLStyleFactory.setSymbolSortKey(layer, styleValue);
+              break;
             case "symbolZOrder":
               RCTMGLStyleFactory.setSymbolZOrder(layer, styleValue);
               break;
@@ -274,11 +277,20 @@ public class RCTMGLStyleFactory {
             case "textJustify":
               RCTMGLStyleFactory.setTextJustify(layer, styleValue);
               break;
+            case "textRadialOffset":
+              RCTMGLStyleFactory.setTextRadialOffset(layer, styleValue);
+              break;
+            case "textVariableAnchor":
+              RCTMGLStyleFactory.setTextVariableAnchor(layer, styleValue);
+              break;
             case "textAnchor":
               RCTMGLStyleFactory.setTextAnchor(layer, styleValue);
               break;
             case "textMaxAngle":
               RCTMGLStyleFactory.setTextMaxAngle(layer, styleValue);
+              break;
+            case "textWritingMode":
+              RCTMGLStyleFactory.setTextWritingMode(layer, styleValue);
               break;
             case "textRotate":
               RCTMGLStyleFactory.setTextRotate(layer, styleValue);
@@ -832,7 +844,11 @@ public class RCTMGLStyleFactory {
 
     public static void setFillPattern(FillLayer layer, RCTMGLStyleValue styleValue) {
       if (styleValue.isExpression()) {
-        layer.setProperties(PropertyFactory.fillPattern(styleValue.getExpression()));
+        if (styleValue.isImageStringValue()) {
+          layer.setProperties(PropertyFactory.fillPattern(styleValue.getImageStringValue()));
+        } else {
+          layer.setProperties(PropertyFactory.fillPattern(styleValue.getExpression()));
+        }
       } else {
         layer.setProperties(PropertyFactory.fillPattern(styleValue.getImageURI()));
       }
@@ -1020,7 +1036,11 @@ public class RCTMGLStyleFactory {
 
     public static void setLinePattern(LineLayer layer, RCTMGLStyleValue styleValue) {
       if (styleValue.isExpression()) {
-        layer.setProperties(PropertyFactory.linePattern(styleValue.getExpression()));
+        if (styleValue.isImageStringValue()) {
+          layer.setProperties(PropertyFactory.linePattern(styleValue.getImageStringValue()));
+        } else {
+          layer.setProperties(PropertyFactory.linePattern(styleValue.getExpression()));
+        }
       } else {
         layer.setProperties(PropertyFactory.linePattern(styleValue.getImageURI()));
       }
@@ -1063,6 +1083,14 @@ public class RCTMGLStyleFactory {
         layer.setProperties(PropertyFactory.symbolAvoidEdges(styleValue.getExpression()));
       } else {
         layer.setProperties(PropertyFactory.symbolAvoidEdges(styleValue.getBoolean(VALUE_KEY)));
+      }
+    }
+
+    public static void setSymbolSortKey(SymbolLayer layer, RCTMGLStyleValue styleValue) {
+      if (styleValue.isExpression()) {
+        layer.setProperties(PropertyFactory.symbolSortKey(styleValue.getExpression()));
+      } else {
+        layer.setProperties(PropertyFactory.symbolSortKey(styleValue.getFloat(VALUE_KEY)));
       }
     }
 
@@ -1132,7 +1160,11 @@ public class RCTMGLStyleFactory {
 
     public static void setIconImage(SymbolLayer layer, RCTMGLStyleValue styleValue) {
       if (styleValue.isExpression()) {
-        layer.setProperties(PropertyFactory.iconImage(styleValue.getExpression()));
+        if (styleValue.isImageStringValue()) {
+          layer.setProperties(PropertyFactory.iconImage(styleValue.getImageStringValue()));
+        } else {
+          layer.setProperties(PropertyFactory.iconImage(styleValue.getExpression()));
+        }
       } else {
         layer.setProperties(PropertyFactory.iconImage(styleValue.getImageURI()));
       }
@@ -1258,6 +1290,22 @@ public class RCTMGLStyleFactory {
       }
     }
 
+    public static void setTextRadialOffset(SymbolLayer layer, RCTMGLStyleValue styleValue) {
+      if (styleValue.isExpression()) {
+        layer.setProperties(PropertyFactory.textRadialOffset(styleValue.getExpression()));
+      } else {
+        layer.setProperties(PropertyFactory.textRadialOffset(styleValue.getFloat(VALUE_KEY)));
+      }
+    }
+
+    public static void setTextVariableAnchor(SymbolLayer layer, RCTMGLStyleValue styleValue) {
+      if (styleValue.isExpression()) {
+        layer.setProperties(PropertyFactory.textVariableAnchor(styleValue.getExpression()));
+      } else {
+        layer.setProperties(PropertyFactory.textVariableAnchor(styleValue.getStringArray(VALUE_KEY)));
+      }
+    }
+
     public static void setTextAnchor(SymbolLayer layer, RCTMGLStyleValue styleValue) {
       if (styleValue.isExpression()) {
         layer.setProperties(PropertyFactory.textAnchor(styleValue.getExpression()));
@@ -1271,6 +1319,14 @@ public class RCTMGLStyleFactory {
         layer.setProperties(PropertyFactory.textMaxAngle(styleValue.getExpression()));
       } else {
         layer.setProperties(PropertyFactory.textMaxAngle(styleValue.getFloat(VALUE_KEY)));
+      }
+    }
+
+    public static void setTextWritingMode(SymbolLayer layer, RCTMGLStyleValue styleValue) {
+      if (styleValue.isExpression()) {
+        layer.setProperties(PropertyFactory.textWritingMode(styleValue.getExpression()));
+      } else {
+        layer.setProperties(PropertyFactory.textWritingMode(styleValue.getStringArray(VALUE_KEY)));
       }
     }
 
@@ -1836,7 +1892,11 @@ public class RCTMGLStyleFactory {
 
     public static void setFillExtrusionPattern(FillExtrusionLayer layer, RCTMGLStyleValue styleValue) {
       if (styleValue.isExpression()) {
-        layer.setProperties(PropertyFactory.fillExtrusionPattern(styleValue.getExpression()));
+        if (styleValue.isImageStringValue()) {
+          layer.setProperties(PropertyFactory.fillExtrusionPattern(styleValue.getImageStringValue()));
+        } else {
+          layer.setProperties(PropertyFactory.fillExtrusionPattern(styleValue.getExpression()));
+        }
       } else {
         layer.setProperties(PropertyFactory.fillExtrusionPattern(styleValue.getImageURI()));
       }
@@ -2104,7 +2164,11 @@ public class RCTMGLStyleFactory {
 
     public static void setBackgroundPattern(BackgroundLayer layer, RCTMGLStyleValue styleValue) {
       if (styleValue.isExpression()) {
-        layer.setProperties(PropertyFactory.backgroundPattern(styleValue.getExpression()));
+        if (styleValue.isImageStringValue()) {
+          layer.setProperties(PropertyFactory.backgroundPattern(styleValue.getImageStringValue()));
+        } else {
+          layer.setProperties(PropertyFactory.backgroundPattern(styleValue.getExpression()));
+        }
       } else {
         layer.setProperties(PropertyFactory.backgroundPattern(styleValue.getImageURI()));
       }

@@ -47,4 +47,6 @@ extern NSString *const RCT_MAPBOX_EVENT_DRAG;
 extern NSString *const RCT_MAPBOX_EVENT_DRAG_END;
 extern NSString *const RCT_MAPBOX_USER_LOCATION_UPDATE;
 
+extern NSString *const RCT_MAPBOX_IMAGES_MISSING_IMAGE;
+
 @end

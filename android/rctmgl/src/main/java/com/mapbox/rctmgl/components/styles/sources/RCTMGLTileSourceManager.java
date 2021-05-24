@@ -1,5 +1,6 @@
 package com.mapbox.rctmgl.components.styles.sources;
 
+import android.graphics.RectF;
 import android.view.View;
 
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -7,6 +8,7 @@ import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableType;
 import com.facebook.react.uimanager.annotations.ReactProp;
 import com.mapbox.rctmgl.components.AbstractEventEmitter;
+import com.mapbox.rctmgl.utils.ConvertUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -74,7 +76,38 @@ public abstract class RCTMGLTileSourceManager<T extends RCTMGLTileSource> extend
     }
 
     @ReactProp(name="tms")
-    public void setTMS(RCTMGLRasterSource source, boolean tms) {
+    public void setTMS(T source, boolean tms) {
         source.setTMS(tms);
+    }
+
+    @ReactProp(name="bounds")
+    public void setBounds(T source, ReadableArray bounds) {
+        if (bounds == null) {
+            return;
+        }
+        if (bounds.size() != 2) {
+            return;
+        }
+        if (bounds.getType(0) != ReadableType.Array || bounds.getType(1) != ReadableType.Array) {
+            return;
+        }
+        ReadableArray ne = bounds.getArray(0);
+        ReadableArray sw = bounds.getArray(1);
+        if (ne == null || sw == null) {
+            return;
+        }
+        if (ne.size() != 2 || sw.size() != 2) {
+            return;
+        }
+        RectF rectF = new RectF();
+        float left = (float)sw.getDouble(0);
+        float top = (float)ne.getDouble(1);
+        float right = (float)ne.getDouble(0);
+        float bottom = (float)sw.getDouble(1);
+        if (left > right || bottom > top) {
+            return;
+        }
+        rectF.set(left, top, right, bottom);
+        source.setBounds(rectF);
     }
 }

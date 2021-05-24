@@ -10,7 +10,10 @@
 #import "CameraUpdateQueue.h"
 #import "RCTMGLUtils.h"
 #import "RNMBImageUtils.h"
+#import "RCTMGLImages.h"
 #import "UIView+React.h"
+#import "RCTMGLNativeUserLocation.h"
+#import "RCTMGLLogging.h"
 
 @implementation RCTMGLMapView
 {
@@ -29,11 +32,13 @@ static double const M2PI = M_PI * 2;
         _pendingInitialLayout = YES;
         _cameraUpdateQueue = [[CameraUpdateQueue alloc] init];
         _sources = [[NSMutableArray alloc] init];
+        _images = [[NSMutableArray alloc] init];
         _layers = [[NSMutableArray alloc] init];
         _pointAnnotations = [[NSMutableArray alloc] init];
         _reactSubviews = [[NSMutableArray alloc] init];
         _layerWaiters = [[NSMutableDictionary alloc] init];
         _styleWaiters = [[NSMutableArray alloc] init];
+        _logging = [[RCTMGLLogging alloc] init];
     }
     return self;
 }
@@ -119,13 +124,20 @@ static double const M2PI = M_PI * 2;
         RCTMGLLight *light = (RCTMGLLight*)subview;
         _light = light;
         _light.map = self;
-    } else if ([subview isKindOfClass:[RCTMGLPointAnnotation class]]) {
+    } else if ([subview isKindOfClass:[RCTMGLNativeUserLocation class]]) {
+        RCTMGLNativeUserLocation *nativeUserLocation = (RCTMGLNativeUserLocation*)subview;
+        nativeUserLocation.map = self;
+    }  else if ([subview isKindOfClass:[RCTMGLPointAnnotation class]]) {
         RCTMGLPointAnnotation *pointAnnotation = (RCTMGLPointAnnotation *)subview;
         pointAnnotation.map = self;
         [_pointAnnotations addObject:pointAnnotation];
     } else if ([subview isKindOfClass:[RCTMGLCamera class]]) {
         RCTMGLCamera *camera = (RCTMGLCamera *)subview;
         camera.map = self;
+    } else if ([subview isKindOfClass:[RCTMGLImages class]]) {
+        RCTMGLImages *images = (RCTMGLImages*)subview;
+        images.map = self;
+        [_images addObject:images];
     } else if ([subview isKindOfClass:[RCTMGLLayer class]]) {
         RCTMGLLayer *layer = (RCTMGLLayer*)subview;
         layer.map = self;
@@ -152,11 +164,21 @@ static double const M2PI = M_PI * 2;
     } else if ([subview isKindOfClass:[RCTMGLCamera class]]) {
         RCTMGLCamera *camera = (RCTMGLCamera *)subview;
         camera.map = nil;
+    } else if ([subview isKindOfClass:[RCTMGLImages class]]) {
+        RCTMGLImages *images = (RCTMGLImages*)subview;
+        images.map = nil;
+        [_images removeObject:images];
     } else if ([subview isKindOfClass:[RCTMGLLayer class]]) {
         RCTMGLLayer *layer = (RCTMGLLayer*)subview;
         layer.map = nil;
         [_layers removeObject:layer];
-    } else {
+    } else if ([subview isKindOfClass:[RCTMGLNativeUserLocation class]]) {
+        RCTMGLNativeUserLocation *nativeUserLocation = (RCTMGLNativeUserLocation *)subview;
+        nativeUserLocation.map = nil;
+    } else if ([subview isKindOfClass:[RCTMGLLight class]]) {
+        RCTMGLLight *light = (RCTMGLLight*)subview;
+        light.map = nil;
+    }  else {
         NSArray<id<RCTComponent>> *childSubViews = [subview reactSubviews];
         
         for (int i = 0; i < childSubViews.count; i++) {
@@ -347,7 +369,7 @@ static double const M2PI = M_PI * 2;
     _reactDraggableLayerID = reactDraggableLayerID;
 }
 
-- (void)setReactPreferredFramesPerSecond:(NSInteger *)reactPreferredFramesPerSecond
+- (void)setReactPreferredFramesPerSecond:(NSInteger)reactPreferredFramesPerSecond
 {    
     self.preferredFramesPerSecond = reactPreferredFramesPerSecond;
 }
@@ -415,6 +437,11 @@ static double const M2PI = M_PI * 2;
     }
     
     return touchableSources;
+}
+
+- (NSArray<RCTMGLImages*>*)getAllImages
+{
+    return [_images copy];
 }
 
 - (NSArray<RCTMGLShapeSource *> *)getAllShapeSources

@@ -1,8 +1,8 @@
 package com.mapbox.rctmgl.components.styles.sources;
 
 import android.content.Context;
-import android.support.annotation.Nullable;
-import android.support.annotation.Size;
+import androidx.annotation.Nullable;
+import androidx.annotation.Size;
 
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeMap;
@@ -27,8 +27,8 @@ public class RCTMGLVectorSource extends RCTMGLTileSource<VectorSource> {
         mManager = manager;
     }
 
-    public void onPress(Feature feature) {
-        mManager.handleEvent(FeatureClickEvent.makeVectorSourceEvent(this, feature));
+    public void onPress(OnPressEvent event) {
+        mManager.handleEvent(FeatureClickEvent.makeVectorSourceEvent(this, event));
     }
 
     @Override
@@ -47,6 +47,13 @@ public class RCTMGLVectorSource extends RCTMGLTileSource<VectorSource> {
     public void querySourceFeatures(String callbackID,
                                              @Size(min = 1) List<String> layerIDs,
                                              @Nullable Expression filter) {
+        if (mSource == null) {
+            WritableMap payload = new WritableNativeMap();
+            payload.putString("error", "source is not yet loaded");
+            AndroidCallbackEvent event = new AndroidCallbackEvent(this, callbackID, payload);
+            mManager.handleEvent(event);
+            return;
+        }
         List<Feature> features = mSource.querySourceFeatures(layerIDs.toArray(new String[layerIDs.size()]), filter);
         WritableMap payload = new WritableNativeMap();
         payload.putString("data", FeatureCollection.fromFeatures(features).toJson());

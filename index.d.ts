@@ -21,7 +21,6 @@ import {
   LineString,
   Coord,
   Units,
-  Point,
   BBox,
   Id,
   FeatureCollection,
@@ -96,11 +95,23 @@ export type MapboxGLEvent<
   V = Element
 > = SyntheticEvent<V, {type: T; payload: P}>;
 
+export type OnPressEvent = {
+  features: Array<GeoJSON.Feature>;
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
+  point: {
+    x: number;
+    y: number;
+  }
+};
+
 declare namespace MapboxGL {
   function removeCustomHeader(headerName: string): void;
   function addCustomHeader(headerName: string, headerValue: string): void;
-  function setAccessToken(accessToken: string): void;
-  function getAccessToken(): Promise<void>;
+  function setAccessToken(accessToken: string | null): void;
+  function getAccessToken(): Promise<string>;
   function setTelemetryEnabled(telemetryEnabled: boolean): void;
   function setConnected(connected: boolean): void;
   function requestAndroidLocationPermissions(): Promise<boolean>;
@@ -109,6 +120,7 @@ declare namespace MapboxGL {
 
   const offlineManager: OfflineManager;
   const snapshotManager: SnapshotManager;
+  const locationManager: LocationManager;
 
   /**
    * GeoUtils
@@ -134,6 +146,21 @@ declare namespace MapboxGL {
     function getOrCalculateVisibleRegion(coord: { lon: number; lat: number }, zoomLevel: number, width: number, height: number, nativeRegion: { properties: { visibleBounds: number[] }; visibleBounds: number[] }): void;
   }
 
+  namespace Animated {
+    // sources
+    class ShapeSource extends Component<ShapeSourceProps> {}
+    class ImageSource extends Component<ImageSourceProps> {}
+
+    // layers
+    class FillLayer extends Component<FillLayerProps> {}
+    class FillExtrusionLayer extends Component<FillExtrusionLayerProps> {}
+    class LineLayer extends Component<LineLayerProps> {}
+    class CircleLayer extends Component<CircleLayerProps> {}
+    class SymbolLayer extends Component<SymbolLayerProps> {}
+    class RasterLayer extends Component<RasterLayerProps> {}
+    class BackgroundLayer extends Component<BackgroundLayerProps> {}
+  }
+
   /**
    * Components
    */
@@ -145,12 +172,12 @@ declare namespace MapboxGL {
       coordinate: GeoJSON.Position,
       filter?: Expression,
       layerIds?: Array<string>,
-    ): Promise<GeoJSON.FeatureCollection?>;
+    ): Promise<GeoJSON.FeatureCollection | undefined>;
     queryRenderedFeaturesInRect(
       coordinate: GeoJSON.Position,
       filter?: Expression,
       layerIds?: Array<string>,
-    ): Promise<GeoJSON.FeatureCollection?>;
+    ): Promise<GeoJSON.FeatureCollection | undefined>;
     takeSnap(writeToDisk?: boolean): Promise<string>;
     getZoom(): Promise<number>;
     getCenter(): Promise<GeoJSON.Position>;
@@ -212,8 +239,12 @@ declare namespace MapboxGL {
     identity(attributeName: string): number;
   }
 
-  class PointAnnotation extends Component<PointAnnotationProps> {}
+  class PointAnnotation extends Component<PointAnnotationProps> {
+    refresh(): void;
+  }
+  class MarkerView extends Component<MarkerViewProps> {}
   class Callout extends Component<CalloutProps> {}
+  interface Style extends React.FC<StyleProps> {}
 
   /**
    * Sources
@@ -236,18 +267,26 @@ declare namespace MapboxGL {
   class Images extends Component<ImagesProps> {}
   class ImageSource extends Component<ImageSourceProps> {}
 
+  class LocationManager extends Component {
+    start(displacement?: number): void;
+    stop(): void;
+  }
+
   /**
    * Offline
    */
   class OfflineManager extends Component {
     createPack(
       options: OfflineCreatePackOptions,
-      progressListener?: (pack: OfflinePack, status: object) => void,
-      errorListener?: (pack: OfflinePack, err: object) => void
-    ): void;
+      progressListener?: (pack: OfflinePack, status: OfflineProgressStatus) => void,
+      errorListener?: (pack: OfflinePack, err: OfflineProgressError) => void
+    ): Promise<void>;
     deletePack(name: string): Promise<void>;
     getPacks(): Promise<Array<OfflinePack>>;
-    getPack(name: string): Promise<OfflinePack>;
+    getPack(name: string): Promise<OfflinePack | undefined>;
+    invalidateAmbientCache(): Promise<void>;
+    clearAmbientCache(): Promise<void>;
+    setMaximumAmbientCacheSize(size: number): Promise<void>;
     resetDatabase(): Promise<void>;
     setTileCountLimit(limit: number): void;
     setProgressEventThrottle(throttleValue: number): void;
@@ -263,23 +302,49 @@ declare namespace MapboxGL {
     takeSnap(options: SnapshotOptions): Promise<TakeSnapPromise>;
   }
 
+  interface OfflineProgressStatus {
+    name: string;
+    state: number;
+    percentage: number;
+    completedResourceSize: number;
+    completedTileCount: number;
+    completedResourceCount: number;
+    requiredResourceCount: number;
+    completedTileSize: number;
+  }
+
+  interface OfflineProgressError {
+    message: string;
+    name: string;
+  }
+
   interface OfflinePack {
     name: string,
     bounds: [GeoJSON.Position, GeoJSON.Position];
     metadata: any;
-    status: () => any,
-    resume: () => any,
-    pause: () => any,
+    status: () => Promise<OfflinePackStatus>,
+    resume: () => Promise<void>,
+    pause: () => Promise<void>,
+  }
+
+  interface OfflinePackStatus {
+    name: string,
+    state: number,
+    percentage: number,
+    completedResourceCount: number,
+    completedResourceSize: number,
+    completedTileSize: number,
+    completedTileCount: number,
+    requiredResourceCount: number,
   }
 
   /**
    * Constants
    */
   enum UserTrackingModes {
-    None = 0,
-    Follow = 1,
-    FollowWithCourse = 2,
-    FollowWithHeading = 3,
+    Follow = 'normal',
+    FollowWithHeading = 'compass',
+    FollowWithCourse = 'course',
   }
 
   enum InterpolationMode {
@@ -311,32 +376,31 @@ export type AttributionPosition =
   | {bottom: number; left: number}
   | {bottom: number; right: number};
 
-  export interface RegionPayload {
-    zoomLevel: number;
-    heading: number;
-    animated: boolean;
-    pitch: number;
-    isUserInteraction: number;
-    visibleBounds: GeoJSON.Position[];
-  }
-  
-  interface PressProperties {
-    screenPointX: number
-    screenPointY: number
-  }
-  
-  export interface OnPressPayloadInternal {
-    type: string
-    geometry: Geometry
-    properties: PressProperties
-  }
+interface PressProperties {
+  screenPointX: number
+  screenPointY: number
+}
+
+export interface OnPressPayloadInternal {
+  type: string
+  geometry: Geometry
+  properties: PressProperties
+}
+export interface RegionPayload {
+  zoomLevel: number;
+  heading: number;
+  animated: boolean;
+  isUserInteraction: boolean;
+  visibleBounds: GeoJSON.Position[];
+  pitch: number;
+}
 
 export interface MapViewProps extends ViewProps {
   animated?: boolean;
   userTrackingMode?: MapboxGL.UserTrackingModes;
   userLocationVerticalAlignment?: number;
   contentInset?: Array<number>;
-  style?: StyleProp;
+  style?: StyleProp<ViewStyle>;
   styleURL?: string;
   localizeLabels?: boolean;
   zoomEnabled?: boolean;
@@ -421,16 +485,20 @@ export interface CameraSettings {
   };
   zoomLevel?: number;
   animationDuration?: number;
+  animationMode?: 'flyTo' | 'easeTo' | 'moveTo';
+  stops?: CameraSettings[];
 }
 
 export interface UserLocationProps {
+  androidRenderMode?: 'normal' | 'compass' | 'gps'
   animated?: boolean;
-  renderMode?: 'normal' | 'custom';
-  visible?: boolean;
-  onPress?: () => void;
-  onUpdate?: (location: MapboxGL.Location) => void;
   children?: ReactNode;
   minDisplacement?: number;
+  onPress?: () => void;
+  onUpdate?: (location: MapboxGL.Location) => void;
+  renderMode?: 'normal' | 'native';
+  showsUserHeadingIndicator?: boolean,
+  visible?: boolean;
 }
 
 export type WithExpression<T> = {
@@ -562,10 +630,13 @@ export interface RasterLayerStyle {
   rasterFadeDuration?: number | Expression;
 }
 
+export type TextVariableAnchorValues = "center" |  "left" |  "right" |  "top" |  "bottom" |  "top-left" |  "top-right" |  "bottom-left" |  "bottom-right";
+
 export interface SymbolLayerStyle {
   symbolPlacement?: 'point' | 'line' | Expression;
   symbolSpacing?: number | Expression;
   symbolAvoidEdges?: boolean | Expression;
+  symbolZOrder?: 'auto' | 'viewport-y' | 'source' | Expression;
   iconAllowOverlap?: boolean | Expression;
   iconIgnorePlacement?: boolean | Expression;
   iconOptional?: boolean | Expression;
@@ -599,6 +670,8 @@ export interface SymbolLayerStyle {
   textAllowOverlap?: boolean | Expression;
   textIgnorePlacement?: boolean | Expression;
   textOptional?: boolean | Expression;
+  textVariableAnchor?: Array<TextVariableAnchorValues>;
+  textRadialOffset?: number | Expression;
   visibility?: Visibility | Expression;
   iconOpacity?: number | Expression;
   iconOpacityTransition?: Transition | Expression;
@@ -654,10 +727,21 @@ export interface PointAnnotationProps {
   title?: string;
   snippet?: string;
   selected?: boolean;
+  draggable?: boolean;
   coordinate: GeoJSON.Position;
   anchor?: Point;
   onSelected?: () => void;
   onDeselected?: () => void;
+  onDragStart?: () => void;
+  onDrag?: () => void;
+  onDragEnd?: () => void;
+}
+
+export interface MarkerViewProps extends PointAnnotationProps {
+}
+
+export interface StyleProps {
+  json: any
 }
 
 export interface CalloutProps extends Omit<ViewProps, 'style'> {
@@ -670,15 +754,16 @@ export interface CalloutProps extends Omit<ViewProps, 'style'> {
 }
 
 export interface TileSourceProps extends ViewProps {
-  id?: string;
+  id: string;
   url?: string;
   tileUrlTemplates?: Array<string>;
   minZoomLevel?: number;
   maxZoomLevel?: number;
+  bounds?: [GeoJSON.Position, GeoJSON.Position];
 }
 
 export interface VectorSourceProps extends TileSourceProps {
-  onPress?: (event: MapboxGLEvent<'vectorsourcelayerpress'>) => void;
+  onPress?: (event: OnPressEvent) => void;
   hitbox?: {
     width: number;
     height: number;
@@ -686,17 +771,17 @@ export interface VectorSourceProps extends TileSourceProps {
 }
 
 export interface ShapeSourceProps extends ViewProps {
-  id?: string;
+  id: string;
   url?: string;
-  shape?: GeoJSON.Geometries | GeoJSON.Feature | GeoJSON.FeatureCollection;
+  shape?: GeoJSON.GeometryCollection | GeoJSON.Feature | GeoJSON.FeatureCollection | GeoJSON.Geometry;
   cluster?: boolean;
   clusterRadius?: number;
   clusterMaxZoomLevel?: number;
   maxZoomLevel?: number;
   buffer?: number;
   tolerance?: number;
-  images?: {assets?: string[]; [key: string]: ImageSourcePropType};
-  onPress?: (event: MapboxGLEvent<'shapesourcelayerpress'>) => void;
+  images?: {assets?: string[]} & {[key: string]: ImageSourcePropType};
+  onPress?: (event: OnPressEvent) => void;
   hitbox?: {
     width: number;
     height: number;
@@ -708,7 +793,7 @@ export interface RasterSourceProps extends TileSourceProps {
 }
 
 export interface LayerBaseProps<T = {}> extends Omit<ViewProps, 'style'> {
-  id?: string;
+  id: string;
   sourceID?: MapboxGL.StyleSource;
   sourceLayerID?: string;
   aboveLayerID?: string;
@@ -727,7 +812,8 @@ export interface CircleLayerProps extends LayerBaseProps {
   style?: StyleProp<CircleLayerStyle>;
 }
 
-export interface FillExtrusionLayerProps extends LayerBaseProps {
+export interface FillExtrusionLayerProps extends Omit<LayerBaseProps, 'id'>  {
+  id: string;
   style?: StyleProp<FillExtrusionLayerStyle>;
 }
 
@@ -752,11 +838,12 @@ export interface HeatmapLayerProps extends LayerBaseProps {
 }
 
 export interface ImagesProps extends ViewProps {
-  images?: {assets?: string[]};
+  images?: {assets?: string[]} & {[key: string]: ImageSourcePropType};
+  nativeAssetImages?: string[]
 }
 
 export interface ImageSourceProps extends ViewProps {
-  id?: string;
+  id: string;
   url?: number | string;
   coordinates: [
     GeoJSON.Position,
@@ -768,7 +855,7 @@ export interface ImageSourceProps extends ViewProps {
 
 export interface OfflineCreatePackOptions {
   name?: string;
-  styleURL?: MapboxGL.StyleURL;
+  styleURL?: string;
   bounds?: [GeoJSON.Position, GeoJSON.Position];
   minZoom?: number;
   maxZoom?: number;
@@ -783,7 +870,7 @@ export interface SnapshotOptions {
   zoomLevel?: number;
   pitch?: number;
   heading?: number;
-  styleURL?: MapboxGL.StyleURL;
+  styleURL?: string;
   writeToDisk?: boolean;
   withLogo?: boolean;
   styleJson?: string

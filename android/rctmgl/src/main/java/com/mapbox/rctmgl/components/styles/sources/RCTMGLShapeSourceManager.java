@@ -7,6 +7,8 @@ import android.media.Image;
 import android.util.Log;
 import android.view.View;
 
+import androidx.annotation.Nullable;
+
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
@@ -21,6 +23,7 @@ import com.mapbox.rctmgl.components.annotation.RCTMGLCallout;
 import com.mapbox.rctmgl.components.mapview.RCTMGLMapView;
 import com.mapbox.rctmgl.components.styles.layers.RCTLayer;
 import com.mapbox.rctmgl.events.constants.EventKeys;
+import com.mapbox.rctmgl.utils.ExpressionParser;
 import com.mapbox.rctmgl.utils.ImageEntry;
 import com.mapbox.rctmgl.utils.ResourceUtils;
 
@@ -125,43 +128,6 @@ public class RCTMGLShapeSourceManager extends AbstractEventEmitter<RCTMGLShapeSo
         source.setTolerance(tolerance);
     }
 
-    @ReactProp(name = "images")
-    public void setImages(RCTMGLShapeSource source, ReadableMap map) {
-        List<Map.Entry<String, ImageEntry>> images = new ArrayList<>();
-
-        ReadableMapKeySetIterator iterator = map.keySetIterator();
-        while (iterator.hasNextKey()) {
-            String imageName = iterator.nextKey();
-            if (map.getType(imageName) == ReadableType.Map) {
-                ReadableMap imageMap = map.getMap(imageName);
-                String uri = imageMap.getString("uri");
-                boolean hasScale = imageMap.hasKey("scale") && imageMap.getType("scale") == ReadableType.Number;
-                double scale = hasScale ? imageMap.getDouble("scale") : 1.0;
-                images.add(new AbstractMap.SimpleEntry<String, ImageEntry>(imageName, new ImageEntry(uri, scale)));
-            } else {
-                images.add(new AbstractMap.SimpleEntry<String, ImageEntry>(imageName, new ImageEntry(map.getString(imageName), 1.0)));
-            }
-        }
-
-        source.setImages(images);
-    }
-
-    @ReactProp(name = "nativeImages")
-    public void setNativeImages(RCTMGLShapeSource source, ReadableArray arr) {
-        List<Map.Entry<String, BitmapDrawable>> resources = new ArrayList<>();
-
-        for (int i = 0; i < arr.size(); i++) {
-            String resourceName = arr.getString(i);
-            BitmapDrawable drawable = (BitmapDrawable) ResourceUtils.getDrawableByName(mContext, resourceName);
-
-            if (drawable != null) {
-                resources.add(new AbstractMap.SimpleEntry<String, BitmapDrawable>(resourceName, drawable));
-            }
-        }
-
-        source.setNativeImages(resources);
-    }
-
     @ReactProp(name = "hasPressListener")
     public void setHasPressListener(RCTMGLShapeSource source, boolean hasPressListener) {
         source.setHasPressListener(hasPressListener);
@@ -176,6 +142,30 @@ public class RCTMGLShapeSourceManager extends AbstractEventEmitter<RCTMGLShapeSo
     public Map<String, String> customEvents() {
         return MapBuilder.<String, String>builder()
                 .put(EventKeys.SHAPE_SOURCE_LAYER_CLICK, "onMapboxShapeSourcePress")
+                .put(EventKeys.MAP_ANDROID_CALLBACK, "onAndroidCallback")
                 .build();
+    }
+
+    //region React Methods
+    public static final int METHOD_FEATURES = 103;
+
+    @Nullable
+    @Override
+    public Map<String, Integer> getCommandsMap() {
+        return MapBuilder.<String, Integer>builder()
+                .put("features", METHOD_FEATURES)
+                .build();
+    }
+
+    @Override
+    public void receiveCommand(RCTMGLShapeSource source, int commandID, @Nullable ReadableArray args) {
+        switch (commandID) {
+            case METHOD_FEATURES:
+                source.querySourceFeatures(
+                        args.getString(0),
+                        ExpressionParser.from(args.getArray(1))
+                        );
+                break;
+        }
     }
 }
